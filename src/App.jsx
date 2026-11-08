@@ -621,7 +621,7 @@ function App() {
       const safeName = projectName.replace(/[^a-z0-9-_]/gi, '_') || 'projeto';
       const filePath = await saveDialog({
         title: translateText('Salvar projeto Edit Master', language),
-        defaultPath: `${safeName}.emproj`,
+        defaultPath: mediaStorageFolder ? `${mediaStorageFolder}/${safeName}.emproj` : `${safeName}.emproj`,
         filters: [{ name: translateText('Projeto Edit Master', language), extensions: ['emproj'] }],
       });
       if (!filePath) return;
