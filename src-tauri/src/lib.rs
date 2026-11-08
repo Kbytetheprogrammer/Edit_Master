@@ -1378,11 +1378,14 @@ fn extract_audio_blocking(request: ExtractAudioRequest) -> Result<String, String
     if let (Ok(source), Ok(destination)) = (input.canonicalize(), output.canonicalize()) {
         if source == destination { return Err("O arquivo de destino não pode substituir o arquivo original.".into()); }
     }
+    if output.exists() {
+        return Err("O arquivo de destino já existe. Escolha outro nome para evitar sobrescrever um áudio existente.".into());
+    }
     if let Some(parent) = output.parent() {
         fs::create_dir_all(parent).map_err(|error| format!("Não foi possível criar a pasta de destino: {error}"))?;
     }
     let mut command = Command::new(&ffmpeg);
-    command.args(["-hide_banner", "-nostdin", "-y", "-i"])
+    command.args(["-hide_banner", "-nostdin", "-n", "-i"])
         .arg(&input)
         .args(["-map", "0:a:0", "-vn"])
         .args(codec_args)
@@ -1390,11 +1393,9 @@ fn extract_audio_blocking(request: ExtractAudioRequest) -> Result<String, String
     let result = command.output().map_err(|error| format!("Não foi possível iniciar o FFmpeg: {error}"))?;
     if !result.status.success() {
         let details = String::from_utf8_lossy(&result.stderr);
-        let _ = fs::remove_file(&output);
         return Err(format!("O FFmpeg não conseguiu extrair uma faixa de áudio: {}", details.chars().rev().take(900).collect::<String>().chars().rev().collect::<String>()));
     }
     if !output.is_file() || output.metadata().map(|meta| meta.len() == 0).unwrap_or(true) {
-        let _ = fs::remove_file(&output);
         return Err("O FFmpeg terminou sem produzir um arquivo de áudio válido.".into());
     }
     Ok(output.to_string_lossy().into_owned())
