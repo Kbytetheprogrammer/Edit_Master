@@ -1,9 +1,10 @@
+import { withLocalization } from './i18n.js';
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { CheckCircle2, ExternalLink, KeyRound, LoaderCircle, LockKeyhole, Upload, Youtube } from 'lucide-react';
 
-export default function YouTubePublish({ initialVideoPath = '', onClose, setNotice }) {
+function YouTubePublish({ initialVideoPath = '', onClose, setNotice }) {
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [connected, setConnected] = useState(false);
@@ -94,3 +95,5 @@ export default function YouTubePublish({ initialVideoPath = '', onClose, setNoti
     <div className="youtube-footer">O Edit Master não inclui credenciais de desenvolvedor próprias. A API do YouTube está sujeita a OAuth, cotas e regras de publicação do Google.</div>
   </div>;
 }
+
+export default withLocalization(YouTubePublish);
