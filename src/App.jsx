@@ -58,6 +58,7 @@ function App() {
   const [clips, setClips] = useState([]);
   const [subtitles, setSubtitles] = useState([]);
   const [selectedMedia, setSelectedMedia] = useState(null);
+  const [mediaDeleteBusy, setMediaDeleteBusy] = useState(false);
   const [selectedClip, setSelectedClip] = useState(null);
   const [inspectorTab, setInspectorTab] = useState('properties');
   const [filter, setFilter] = useState('all');
@@ -410,6 +411,34 @@ function App() {
     if (selectedClip === id) setSelectedClip(null);
     setDirty(true);
     setNotice('Clipe removido da timeline.');
+  };
+  const removeMediaFromLibrary = async (item) => {
+    if (!item || mediaDeleteBusy) return;
+    if (clips.some(clip => clip.mediaId === item.id)) {
+      setNotice('Remova primeiro os clipes desta mídia da timeline. O arquivo original foi preservado.');
+      return;
+    }
+    const action = item.sourcePath
+      ? 'Enviar o arquivo original para a Lixeira do Windows?'
+      : 'Remover esta mídia da biblioteca? O arquivo original não será apagado.';
+    if (!window.confirm(`${action}\n\n${item.name}`)) return;
+    setMediaDeleteBusy(true);
+    try {
+      if (item.sourcePath) await invoke('move_media_to_recycle_bin', { filePath: item.sourcePath });
+      setMedia(old => old.filter(mediaItem => mediaItem.id !== item.id));
+      if (selectedMedia === item.id) {
+        setSelectedMedia(null);
+        setTime(0);
+        setDuration(0);
+        setPlaying(false);
+      }
+      setDirty(true);
+      setNotice(item.sourcePath ? 'Arquivo enviado à Lixeira do Windows.' : 'Mídia removida da biblioteca; o arquivo original foi preservado.');
+    } catch (error) {
+      setNotice(`Não foi possível remover a mídia: ${String(error)}`);
+    } finally {
+      setMediaDeleteBusy(false);
+    }
   };
   const select = (item) => {
     setSelectedClip(null);
@@ -1083,7 +1112,7 @@ function App() {
         <button className="duplicate-scan-button" onClick={chooseDuplicateFolder}><Search size={13}/> Procurar vídeos duplicados</button>
         <div className="search-box"><Search size={14}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar mídia..."/><SlidersHorizontal size={14}/></div>
         <div className="media-tabs">{[['all','Tudo'],['video','Vídeos'],['image','Imagens'],['audio','Áudios']].map(([id,label])=><button key={id} className={filter===id?'active-tab':''} onClick={()=>setFilter(id)}>{label}</button>)}</div>
-        <div className="media-list">{visibleMedia.length===0?<div className="empty-media"><div className="empty-icon"><FolderOpen size={25}/></div><b>{media.length?'Nenhum resultado':'Sua biblioteca está vazia'}</b><span>{media.length?'Tente outro termo ou filtro.':'Arraste arquivos para cá ou importe vídeos, imagens e áudios.'}</span><button onClick={chooseMediaFiles}>Selecionar arquivos</button></div>:visibleMedia.map(item=><div key={item.id} draggable onDragStart={e=>{dragId.current=item.id;e.dataTransfer.setData('text/media-id',item.id);}} className={`media-item ${selectedMedia===item.id?'chosen':''}`} onClick={()=>select(item)}><div className="thumb">{item.type==='image'?<img src={item.url} alt=""/>:item.type==='video'?<Film size={19}/>:<AudioLines size={19}/>}</div><div className="media-meta"><b title={item.name}>{item.name}</b><span>{item.type.toUpperCase()} · {(item.size/1048576).toFixed(1)} MB</span></div><button className="add-clip" title="Adicionar à timeline" onClick={e=>{e.stopPropagation();addClip(item);}}><Plus size={15}/></button></div>)}</div>
+        <div className="media-list">{visibleMedia.length===0?<div className="empty-media"><div className="empty-icon"><FolderOpen size={25}/></div><b>{media.length?'Nenhum resultado':'Sua biblioteca está vazia'}</b><span>{media.length?'Tente outro termo ou filtro.':'Arraste arquivos para cá ou importe vídeos, imagens e áudios.'}</span><button onClick={chooseMediaFiles}>Selecionar arquivos</button></div>:visibleMedia.map(item=><div key={item.id} draggable onDragStart={e=>{dragId.current=item.id;e.dataTransfer.setData('text/media-id',item.id);}} className={`media-item ${selectedMedia===item.id?'chosen':''}`} onClick={()=>select(item)}><div className="thumb">{item.type==='image'?<img src={item.url} alt=""/>:item.type==='video'?<Film size={19}/>:<AudioLines size={19}/>}</div><div className="media-meta"><b title={item.name}>{item.name}</b><span>{item.type.toUpperCase()} · {(item.size/1048576).toFixed(1)} MB</span></div><div className="media-item-actions"><button className="add-clip" title="Adicionar à timeline" onClick={e=>{e.stopPropagation();addClip(item);}}><Plus size={15}/></button><button className="media-trash-button" title="Excluir mídia" aria-label={`Excluir ${item.name}`} disabled={mediaDeleteBusy} onClick={e=>{e.stopPropagation();void removeMediaFromLibrary(item);}}><Trash2 size={14}/></button></div></div>)}</div>
         <div className="storage-note"><Layers3 size={14}/>{media.length} arquivos · {(media.reduce((s,m)=>s+m.size,0)/1048576).toFixed(1)} MB referenciados</div>
       </aside>
       <section className="preview-panel panel">
