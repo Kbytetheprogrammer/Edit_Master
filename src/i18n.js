@@ -73,3 +73,32 @@ export function withLocalization(Component) {
   LocalizedComponent.displayName = `Localized(${Component.displayName || Component.name || 'Component'})`;
   return LocalizedComponent;
 }
+// Core editor vocabulary used throughout the workspace.
+Object.assign(dictionaries.en, {
+  'Tela inicial':'Home','Biblioteca':'Library','Monitor':'Preview monitor','Timeline':'Timeline',
+  'Inspetor':'Inspector','Mídia':'Media','Propriedades':'Properties','Velocidade':'Speed',
+  'Volume':'Volume','Opacidade':'Opacity','Rotação':'Rotation','Posição':'Position',
+  'Escala':'Scale','Cortar':'Trim','Dividir':'Split','Desfazer':'Undo','Refazer':'Redo',
+  'Reproduzir':'Play','Pausar':'Pause','Exportação':'Export','Qualidade':'Quality',
+  'Resolução':'Resolution','Selecionar pasta':'Select folder','Verificar atualizações':'Check for updates',
+  'Nenhum arquivo':'No files','Falha':'Failed','Concluído':'Completed','Carregando…':'Loading…',
+  'Pasta':'Folder','Arquivo':'File','Projeto':'Project','Áudio':'Audio','Vídeo':'Video',
+  'Imagem':'Image','Legenda':'Subtitle','Legendas':'Subtitles','Título':'Title',
+  'Iniciar':'Start','Continuar':'Continue','Conectar':'Connect','Desconectar':'Disconnect',
+  'Ativado':'Enabled','Desativado':'Disabled','Automático':'Automatic','Manual':'Manual',
+  'Geral':'General','Desempenho':'Performance','Aparência':'Appearance','Tema':'Theme'
+});
+Object.assign(dictionaries.es, {
+  'Tela inicial':'Inicio','Biblioteca':'Biblioteca','Monitor':'Monitor de vista previa','Timeline':'Línea de tiempo',
+  'Inspetor':'Inspector','Mídia':'Medios','Propriedades':'Propiedades','Velocidade':'Velocidad',
+  'Volume':'Volumen','Opacidade':'Opacidad','Rotação':'Rotación','Posição':'Posición',
+  'Escala':'Escala','Cortar':'Recortar','Dividir':'Dividir','Desfazer':'Deshacer','Refazer':'Rehacer',
+  'Reproduzir':'Reproducir','Pausar':'Pausar','Exportação':'Exportación','Qualidade':'Calidad',
+  'Resolução':'Resolución','Selecionar pasta':'Seleccionar carpeta','Verificar atualizações':'Buscar actualizaciones',
+  'Nenhum arquivo':'No hay archivos','Falha':'Error','Concluído':'Completado','Carregando…':'Cargando…',
+  'Pasta':'Carpeta','Arquivo':'Archivo','Projeto':'Proyecto','Áudio':'Audio','Vídeo':'Vídeo',
+  'Imagem':'Imagen','Legenda':'Subtítulo','Legendas':'Subtítulos','Título':'Título',
+  'Iniciar':'Iniciar','Continuar':'Continuar','Conectar':'Conectar','Desconectar':'Desconectar',
+  'Ativado':'Activado','Desativado':'Desactivado','Automático':'Automático','Manual':'Manual',
+  'Geral':'General','Desempenho':'Rendimiento','Aparência':'Apariencia','Tema':'Tema'
+});
