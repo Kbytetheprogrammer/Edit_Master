@@ -1,3 +1,4 @@
+import { withLocalization } from './i18n.js';
 import { useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -15,7 +16,7 @@ const MEDIA_TYPES = {
   freesound: [{ id: 'audio', label: 'Áudios' }],
 };
 
-export default function StockHub({ onMediaAdded, onClose, setNotice }) {
+function StockHub({ onMediaAdded, onClose, setNotice }) {
   const [provider, setProvider] = useState('pexels');
   const [mediaType, setMediaType] = useState('image');
   const [query, setQuery] = useState('');
@@ -135,3 +136,5 @@ export default function StockHub({ onMediaAdded, onClose, setNotice }) {
     <div className="stock-footer"><span>As APIs são gratuitas dentro dos limites e termos de cada provedor; cada usuário fornece sua chave.</span><button className="subtle-button" onClick={onClose}>Fechar Media Hub</button></div>
   </div>;
 }
+
+export default withLocalization(StockHub);
