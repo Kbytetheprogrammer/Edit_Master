@@ -2264,3 +2264,38 @@ mod audio_extraction_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod media_storage_tests {
+    use super::unique_media_destination;
+    use std::fs;
+
+    #[test]
+    fn duplicate_names_get_a_suffix_instead_of_overwriting() {
+        let folder = std::env::temp_dir().join(format!("edit-master-media-test-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&folder).expect("test folder should be created");
+        fs::write(folder.join("clip.mp4"), b"original").expect("original file should be created");
+
+        let destination = unique_media_destination(&folder, "clip.mp4");
+        assert_eq!(
+            destination.file_name().and_then(|name| name.to_str()),
+            Some("clip (2).mp4")
+        );
+
+        fs::remove_dir_all(folder).expect("test folder should be removed");
+    }
+
+    #[test]
+    fn unique_names_keep_the_original_extension() {
+        let folder = std::env::temp_dir().join(format!("edit-master-media-test-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&folder).expect("test folder should be created");
+
+        let destination = unique_media_destination(&folder, "footage.final.mov");
+        assert_eq!(
+            destination.file_name().and_then(|name| name.to_str()),
+            Some("footage.final.mov")
+        );
+
+        fs::remove_dir_all(folder).expect("test folder should be removed");
+    }
+}
