@@ -39,6 +39,9 @@ jobs:
       - name: Run project tests
         run: npm test
 
+      - name: Run Rust backend tests
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+
       - name: Build the NSIS installer
         run: npm run tauri:build
 
