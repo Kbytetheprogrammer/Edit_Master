@@ -903,11 +903,15 @@ function escapeRegExp(value) {
 
 function translateTemplate(value, dictionary) {
   for (const [source, target] of Object.entries(dictionary)) {
-    if (!source.includes('
+    if (!source.includes('{')) continue;
+    const tokens = source.split(/(\{[^}]*\})/g);
+    const pattern = tokens.map(token =>
+      token.startsWith('{') && token.endsWith('}') ? '(.+?)' : escapeRegExp(token)
+    ).join('');
     const match = value.match(new RegExp('^' + pattern + '$'));
     if (!match) continue;
     let capture = 1;
-    return target.replace(/(\$[{][^}]+[}]|[{][^}]*[}])/g, () => match[capture++] ?? '');
+    return target.replace(/\{[^}]*\}/g, () => match[capture++] ?? '');
   }
   return undefined;
 }
