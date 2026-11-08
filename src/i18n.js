@@ -1225,7 +1225,8 @@ const compiledTemplates = Object.fromEntries(
     Object.entries(dictionary)
       .filter(([source]) => source.includes('{'))
       .map(([source, target]) => {
-        const tokens = source.split(/(\{[^}]*\})/g);
+        const normalizedSource = source.replace(/\$\{/g, '{');
+        const tokens = normalizedSource.split(/(\{[^}]*\})/g);
         const pattern = tokens.map(token =>
           token.startsWith('{') && token.endsWith('}') ? '(.+?)' : escapeRegExp(token)
         ).join('');
@@ -1239,7 +1240,7 @@ function translateTemplate(value, language) {
     const match = value.match(regex);
     if (!match) continue;
     let capture = 1;
-    return target.replace(/\{[^}]*\}/g, () => match[capture++] ?? '');
+    return target.replace(/\$\{[^}]*\}|\{[^}]*\}/g, () => match[capture++] ?? '');
   }
   return undefined;
 }
