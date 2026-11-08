@@ -1252,6 +1252,22 @@ export function translateText(value, language = 'pt-BR') {
   const templated = translateTemplate(value, language);
   if (templated !== undefined) return templated;
 
+  // Translate runtime messages with interpolated values that are not present in source templates.
+  const missingProjectMedia = value.match(/^Não foi possível salvar um projeto completo: estes clipes não têm um caminho permanente\. Reimporte pelo botão Importar arquivos: (.+)$/);
+  if (missingProjectMedia) return (language === 'en'
+    ? 'Could not save a complete project: these clips have no permanent path. Reimport them using Import files: '
+    : 'No se pudo guardar un proyecto completo: estos clips no tienen una ruta permanente. Vuelve a importarlos con Importar archivos: ') + missingProjectMedia[1];
+
+  const failedRemovals = value.match(/^(\d+) (\d+) arquivo\(s\) não puderam ser removidos: (.*)$/);
+  if (failedRemovals) return (language === 'en'
+    ? failedRemovals[1] + ' ' + failedRemovals[2] + ' file(s) could not be removed: '
+    : failedRemovals[1] + ' ' + failedRemovals[2] + ' archivo(s) no se pudieron eliminar: ') + failedRemovals[3];
+
+  const scanSummary = value.match(/^Foram analisados (\d+) arquivo\(s\) de vídeo\.(?: (\d+) item\(ns\) não puderam ser lidos\.)?$/);
+  if (scanSummary) return language === 'en'
+    ? 'Scanned ' + scanSummary[1] + ' video file(s).' + (scanSummary[2] ? ' ' + scanSummary[2] + ' item(s) could not be read.' : '')
+    : 'Se analizaron ' + scanSummary[1] + ' archivo(s) de vídeo.' + (scanSummary[2] ? ' No se pudieron leer ' + scanSummary[2] + ' elemento(s).' : '');
+
   // Translate common dynamic feedback prefixes while preserving the actual error detail.
 const dynamicPrefixes = language === 'en'
     ? [['Não foi possível ', 'Could not '], ['Falha ao ', 'Failed to '], ['Falha na ', 'Failure during '], ['Falha no ', 'Failure in '], ['Não há ', 'There are no '], ['Nenhum ', 'No '], ['Selecione ', 'Select '], ['Escolha ', 'Choose '], ['Importe ', 'Import '], ['Adicione ', 'Add ']]
