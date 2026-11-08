@@ -1,4 +1,4 @@
-import { withLocalization } from './i18n.js';
+import { withLocalization, translateText } from './i18n.js';
 import { useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -28,7 +28,7 @@ function makeSrt(cues) {
   return cues.map((cue, index) => `${index + 1}\n${stamp(cue.start)} --> ${stamp(cue.end)}\n${String(cue.text || '').trim()}`).join('\n\n');
 }
 
-function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = [], onApplySrt, onClose, setNotice }) {
+function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = [], onApplySrt, onClose, setNotice, uiLanguage = 'pt-BR' }) {
   const [provider, setProvider] = useState(() => localStorage.getItem(PROVIDER_KEY) || 'local');
   const [task, setTask] = useState('generate');
   const [language, setLanguage] = useState('pt');
@@ -90,10 +90,10 @@ function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = []
   const selectPath = async (kind) => {
     try {
       const config = kind === 'whisper'
-        ? { title: 'Selecionar whisper-cli.exe', filters: [{ name: 'Executável Whisper', extensions: ['exe'] }] }
+        ? { title: translateText('Selecionar whisper-cli.exe', uiLanguage), filters: [{ name: translateText('Executável Whisper', uiLanguage), extensions: ['exe'] }] }
         : kind === 'model'
-          ? { title: 'Selecionar modelo Whisper', filters: [{ name: 'Modelo Whisper', extensions: ['bin'] }] }
-          : { title: 'Selecionar ffmpeg.exe', filters: [{ name: 'FFmpeg', extensions: ['exe'] }] };
+          ? { title: translateText('Selecionar modelo Whisper', uiLanguage), filters: [{ name: translateText('Modelo Whisper', uiLanguage), extensions: ['bin'] }] }
+          : { title: translateText('Selecionar ffmpeg.exe', uiLanguage), filters: [{ name: 'FFmpeg', extensions: ['exe'] }] };
       const selected = await open({ multiple: false, directory: false, ...config });
       if (!selected || Array.isArray(selected)) return;
       if (kind === 'whisper') { setWhisperExecutable(selected); localStorage.setItem(WHISPER_EXE_KEY, selected); }
