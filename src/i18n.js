@@ -1205,6 +1205,33 @@ Object.assign(dictionaries.es, {
   "Vídeo enviado com sucesso. Privacidade: \${result.privacyStatus || privacy}.":"Vídeo enviado correctamente. Privacidad: \${result.privacyStatus || privacy}."
 });
 
+Object.assign(dictionaries.en, {
+  "Pasta para vídeos, imagens e áudios": "Folder for videos, images and audio",
+  "Nenhuma pasta escolhida. Você pode manter o aplicativo no SSD e guardar as mídias em outro disco, como um HD.": "No folder selected. You can keep the app on the SSD and store media on another drive, such as an HDD.",
+  "Como funciona": "How it works",
+  "Quando uma pasta estiver configurada, os próximos arquivos importados pelo botão Importar serão copiados para ela. Os originais serão preservados. Arquivos com nomes repetidos receberão um sufixo para evitar sobrescrita. A pasta pode ficar em outro disco, por exemplo D:\\EditMaster-Midia.": "When a folder is configured, future files imported with the Import button will be copied there. Originals are preserved. Duplicate filenames receive a suffix to prevent overwriting. The folder can be on another drive, for example D:\\EditMaster-Media.",
+  "Ativo": "Active",
+  "Não configurado": "Not configured",
+  "Alterar pasta": "Change folder",
+  "Escolher pasta": "Choose folder",
+  "Escolher pasta para armazenar mídias": "Choose a folder to store media",
+  "Pasta de armazenamento de mídia salva. Novos arquivos importados pelo seletor serão copiados para ela.": "Media storage folder saved. New files imported through the file picker will be copied there.",
+  "Não foi possível selecionar a pasta de armazenamento: ": "Could not select the storage folder: "
+});
+Object.assign(dictionaries.es, {
+  "Pasta para vídeos, imagens e áudios": "Carpeta para vídeos, imágenes y audio",
+  "Nenhuma pasta escolhida. Você pode manter o aplicativo no SSD e guardar as mídias em outro disco, como um HD.": "No se ha elegido ninguna carpeta. Puedes mantener la aplicación en el SSD y guardar los archivos multimedia en otro disco, como un HDD.",
+  "Como funciona": "Cómo funciona",
+  "Quando uma pasta estiver configurada, os próximos arquivos importados pelo botão Importar serão copiados para ela. Os originais serão preservados. Arquivos com nomes repetidos receberão um sufixo para evitar sobrescrita. A pasta pode ficar em outro disco, por exemplo D:\\EditMaster-Midia.": "Cuando se configura una carpeta, los próximos archivos importados con el botón Importar se copiarán allí. Los originales se conservarán. Los nombres duplicados recibirán un sufijo para evitar sobrescrituras. La carpeta puede estar en otro disco, por ejemplo D:\\EditMaster-Media.",
+  "Ativo": "Activo",
+  "Não configurado": "Sin configurar",
+  "Alterar pasta": "Cambiar carpeta",
+  "Escolher pasta": "Elegir carpeta",
+  "Escolher pasta para armazenar mídias": "Elegir una carpeta para almacenar archivos multimedia",
+  "Pasta de armazenamento de mídia salva. Novos arquivos importados pelo seletor serão copiados para ela.": "Carpeta de almacenamiento guardada. Los nuevos archivos importados con el selector se copiarán allí.",
+  "Não foi possível selecionar a pasta de armazenamento: ": "No se pudo seleccionar la carpeta de almacenamiento: "
+});
+
 const attributeNames = new Set([
   'placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'label',
   'description', 'helperText', 'emptyLabel'
