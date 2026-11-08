@@ -1047,3 +1047,79 @@ button:focus-visible,
 
 /* Edit Master 1.0 learning center */
 .help-course{display:flex;flex-direction:column;gap:12px}.help-course-intro{padding:13px;background:#282117;border:1px solid #5a3a20;border-radius:7px}.help-course-intro b,.help-course-note b{font-size:11px;color:#ffad65}.help-course-intro p,.help-course-note p{max-width:none;font-size:9px;line-height:1.65;color:#b8aa9b;margin-top:6px}.help-course-lessons{display:flex;flex-direction:column;gap:7px}.help-lesson{border:1px solid #383838;background:#222;border-radius:6px;overflow:hidden}.help-lesson summary{list-style:none;cursor:pointer;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}.help-lesson summary::-webkit-details-marker{display:none}.help-lesson summary span{font-size:10px;font-weight:700;color:#eee}.help-lesson summary small{font-size:8px;color:#ffad65;white-space:nowrap}.help-lesson[open] summary{border-bottom:1px solid #383838;background:#29231d}.help-lesson ol{padding:8px 16px 12px 32px;margin:0}.help-lesson li{font-size:9px;line-height:1.65;color:#bbb;padding:4px 0}.help-course-note{padding:12px;border:1px solid #62432b;background:#2b2118;border-radius:6px}.help-course>.export-button{align-self:flex-end}.modal-card:has(.help-course){width:min(780px,96vw)}
+
+
+/* Edit Master 1.0: selectable color identities. */
+:root[data-theme="blue"] {
+  --orange: #3b82f6;
+  --orange2: #60a5fa;
+}
+:root[data-theme="green"] {
+  --orange: #22c55e;
+  --orange2: #facc15;
+}
+:root[data-theme="blue"] .brand-mark,
+:root[data-theme="blue"] .preview-logo,
+:root[data-theme="blue"] .play-button,
+:root[data-theme="blue"] .export-button {
+  background: var(--orange) !important;
+  color: #07111f !important;
+}
+:root[data-theme="green"] .brand-mark,
+:root[data-theme="green"] .preview-logo,
+:root[data-theme="green"] .play-button,
+:root[data-theme="green"] .export-button {
+  background: var(--orange) !important;
+  color: #07130a !important;
+}
+:root[data-theme="blue"] .version,
+:root[data-theme="blue"] .settings-tag {
+  color: #93c5fd;
+  border-color: #1e3a5f;
+  background: #10233c;
+}
+:root[data-theme="green"] .version,
+:root[data-theme="green"] .settings-tag {
+  color: #fde68a;
+  border-color: #4d5a20;
+  background: #242b12;
+}
+:root[data-theme="blue"] .import-button,
+:root[data-theme="blue"] .empty-icon,
+:root[data-theme="blue"] .quick-tips,
+:root[data-theme="blue"] .add-clip {
+  color: #93c5fd !important;
+  border-color: #24528a;
+  background-color: #12243b;
+}
+:root[data-theme="green"] .import-button,
+:root[data-theme="green"] .empty-icon,
+:root[data-theme="green"] .quick-tips,
+:root[data-theme="green"] .add-clip {
+  color: #fde68a !important;
+  border-color: #586326;
+  background-color: #252b14;
+}
+:root[data-theme="blue"] .media-tabs button.active-tab,
+:root[data-theme="blue"] .settings-section-title,
+:root[data-theme="blue"] .settings-section-title svg,
+:root[data-theme="blue"] .track-labels svg {
+  color: var(--orange2) !important;
+  border-color: var(--orange);
+}
+:root[data-theme="green"] .media-tabs button.active-tab,
+:root[data-theme="green"] .settings-section-title,
+:root[data-theme="green"] .settings-section-title svg,
+:root[data-theme="green"] .track-labels svg {
+  color: var(--orange2) !important;
+  border-color: var(--orange);
+}
+.language-welcome-body { padding: 22px; }
+.language-welcome-body > p { color: #aaa; font-size: 12px; line-height: 1.6; margin: 0 0 18px; }
+.language-choice-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.language-choice { min-height: 92px; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 7px; padding: 14px; border: 1px solid #414141; border-radius: 8px; background: #242424; text-align: left; }
+.language-choice:hover { border-color: var(--orange); background: #2b251f; }
+.language-choice b { font-size: 13px; }
+.language-choice span { color: #888; font-size: 10px; }
+.language-welcome-body .language-note { margin: 18px 0 0; font-size: 10px; color: #777; }
+@media (max-width: 560px) { .language-choice-grid { grid-template-columns: 1fr; } }
