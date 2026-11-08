@@ -18,7 +18,7 @@ import StockHub from './StockHub.jsx';
 import YouTubePublish from './YouTubePublish.jsx';
 import HelpCenter from './HelpCenter.jsx';
 import packageJson from '../package.json';
-import { LocalizedTree } from './i18n.js';
+import { LocalizedTree, translateText } from './i18n.js';
 
 const fmt = (value = 0) => {
   const n = Math.max(0, Math.floor(Number(value) || 0));
@@ -352,8 +352,8 @@ function App() {
       const selected = await open({
         multiple: true,
         directory: false,
-        title: 'Importar mídia para o Edit Master',
-        filters: [{ name: 'Mídia compatível', extensions: ['mp4','m4v','mkv','mov','avi','webm','wmv','mpeg','mpg','3gp','flv','mp3','wav','ogg','m4a','aac','flac','png','jpg','jpeg','gif','webp','bmp'] }],
+        title: translateText('Importar mídia para o Edit Master', language),
+        filters: [{ name: translateText('Mídia compatível', language), extensions: ['mp4','m4v','mkv','mov','avi','webm','wmv','mpeg','mpg','3gp','flv','mp3','wav','ogg','m4a','aac','flac','png','jpg','jpeg','gif','webp','bmp'] }],
       });
       if (!selected) return;
       const paths = Array.isArray(selected) ? selected : [selected];
@@ -598,9 +598,9 @@ function App() {
     try {
       const safeName = projectName.replace(/[^a-z0-9-_]/gi, '_') || 'projeto';
       const filePath = await saveDialog({
-        title: 'Salvar projeto Edit Master',
+        title: translateText('Salvar projeto Edit Master', language),
         defaultPath: `${safeName}.emproj`,
-        filters: [{ name: 'Projeto Edit Master', extensions: ['emproj'] }],
+        filters: [{ name: translateText('Projeto Edit Master', language), extensions: ['emproj'] }],
       });
       if (!filePath) return;
       const normalizedPath = filePath.toLowerCase().endsWith('.emproj') ? filePath : `${filePath}.emproj`;
@@ -627,8 +627,8 @@ function App() {
       const filePath = await open({
         multiple: false,
         directory: false,
-        title: 'Abrir projeto Edit Master',
-        filters: [{ name: 'Projeto Edit Master', extensions: ['emproj'] }],
+        title: translateText('Abrir projeto Edit Master', language),
+        filters: [{ name: translateText('Projeto Edit Master', language), extensions: ['emproj'] }],
       });
       if (!filePath || Array.isArray(filePath)) return;
       const project = await invoke('load_project_bundle', { filePath });
@@ -773,7 +773,7 @@ function App() {
 
   const chooseFfmpeg = async () => {
     try {
-      const selected = await open({ multiple: false, directory: false, title: 'Selecionar ffmpeg.exe', filters: [{ name: 'FFmpeg (Windows)', extensions: ['exe'] }] });
+      const selected = await open({ multiple: false, directory: false, title: translateText('Selecionar ffmpeg.exe', language), filters: [{ name: translateText('FFmpeg (Windows)', language), extensions: ['exe'] }] });
       if (!selected || Array.isArray(selected)) return null;
       setFfmpegPath(selected);
       localStorage.setItem(FFMPEG_PATH_KEY, selected);
@@ -791,8 +791,8 @@ function App() {
       sourcePath = await open({
         multiple: false,
         directory: false,
-        title: 'Selecionar vídeo ou arquivo de áudio',
-        filters: [{ name: 'Mídia compatível', extensions: ['mp4','mov','mkv','webm','avi','m4v','mp3','wav','m4a','aac','flac','ogg'] }],
+        title: translateText('Selecionar vídeo ou arquivo de áudio', language),
+        filters: [{ name: translateText('Mídia compatível', language), extensions: ['mp4','mov','mkv','webm','avi','m4v','mp3','wav','m4a','aac','flac','ogg'] }],
       });
     } catch (error) {
       setNotice(`Não foi possível selecionar a mídia: ${String(error)}`);
@@ -811,9 +811,9 @@ function App() {
     let outputPath;
     try {
       outputPath = await saveDialog({
-        title: 'Salvar áudio extraído',
+        title: translateText('Salvar áudio extraído', language),
         defaultPath: `${baseName}.${format}`,
-        filters: [{ name: `Áudio ${format.toUpperCase()}`, extensions: [format] }],
+        filters: [{ name: translateText(`Áudio ${format.toUpperCase()}`, language), extensions: [format] }],
       });
     } catch (error) {
       setNotice(`Não foi possível escolher o destino: ${String(error)}`);
@@ -843,7 +843,7 @@ function App() {
     const suggested = `${(projectName || 'Edit-Master').replace(/[^a-z0-9-_]/gi, '_')}.mp4`;
     let outputPath;
     try {
-      outputPath = await saveDialog({ title: 'Exportar vídeo MP4', defaultPath: suggested, filters: [{ name: 'Vídeo MP4', extensions: ['mp4'] }] });
+      outputPath = await saveDialog({ title: translateText('Exportar vídeo MP4', language), defaultPath: suggested, filters: [{ name: translateText('Vídeo MP4', language), extensions: ['mp4'] }] });
     } catch (error) { setNotice(`Não foi possível escolher o arquivo de saída: ${String(error)}`); return; }
     if (!outputPath) return;
     if (!outputPath.toLowerCase().endsWith('.mp4')) outputPath += '.mp4';
@@ -871,8 +871,8 @@ function App() {
       const selected = await open({
         multiple: false,
         directory: false,
-        title: 'Importar legendas SubRip',
-        filters: [{ name: 'Legendas SubRip', extensions: ['srt'] }],
+        title: translateText('Importar legendas SubRip', language),
+        filters: [{ name: translateText('Legendas SubRip', language), extensions: ['srt'] }],
       });
       if (!selected || Array.isArray(selected)) return;
       const content = await invoke('read_srt_file', { filePath: selected });
@@ -917,7 +917,7 @@ function App() {
       const selected = await open({
         multiple: false,
         directory: true,
-        title: 'Escolher pasta para procurar vídeos duplicados',
+        title: translateText('Escolher pasta para procurar vídeos duplicados', language),
       });
       if (!selected) return;
 
@@ -1008,7 +1008,7 @@ function App() {
       const selected = await open({
         multiple: false,
         directory: true,
-        title: 'Escolher pasta de atualizações do Edit Master',
+        title: translateText('Escolher pasta de atualizações do Edit Master', language),
       });
       if (!selected) return;
       localStorage.setItem(LOCAL_UPDATE_FOLDER_KEY, selected);
@@ -1034,8 +1034,8 @@ function App() {
       const selected = await open({
         multiple: false,
         directory: false,
-        title: 'Selecionar atualização do Edit Master',
-        filters: [{ name: 'Instalador do Edit Master (Windows)', extensions: ['exe'] }],
+        title: translateText('Selecionar atualização do Edit Master', language),
+        filters: [{ name: translateText('Instalador do Edit Master (Windows)', language), extensions: ['exe'] }],
       });
       if (!selected) return;
       setLocalUpdateCandidate(null);
