@@ -845,6 +845,14 @@ Object.assign(dictionaries.es, {
   'Importante: a renderização MP4 atual ainda não incorpora todas as sobreposições e animações da prévia.':'Importante: el renderizado MP4 actual todavía no incluye todas las superposiciones y animaciones de la vista previa.',
   'O instalador inclui whisper-cli.exe e o modelo Tiny, e o aplicativo tenta detectá-los automaticamente. Se a detecção falhar, confira os caminhos no AI Hub.':'El instalador incluye whisper-cli.exe y el modelo Tiny, y la aplicación intenta detectarlos automáticamente. Si falla la detección, comprueba las rutas en AI Hub.'
 });
+Object.assign(dictionaries.en, {
+  'Processando…':'Processing…','pt, en ou auto':'pt, en, or auto','English, Português…':'English, Portuguese…',
+  '. Áudios fornecidos por':'. Audio provided by'
+});
+Object.assign(dictionaries.es, {
+  'Processando…':'Procesando…','pt, en ou auto':'pt, en o automático','English, Português…':'Inglés, portugués…',
+  '. Áudios fornecidos por':'. Audio proporcionado por'
+});
 const attributeNames = new Set([
   'placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'label',
   'description', 'helperText', 'emptyLabel'
