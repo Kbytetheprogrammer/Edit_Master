@@ -2039,6 +2039,21 @@ fn ffprobe_has_audio(ffmpeg_path: &Path, media_path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+fn atempo_chain(speed: f64) -> String {
+    let mut remaining = speed.clamp(0.25, 2.0);
+    let mut filters = Vec::new();
+    while remaining < 0.5 - f64::EPSILON {
+        filters.push("atempo=0.5".to_string());
+        remaining /= 0.5;
+    }
+    while remaining > 2.0 + f64::EPSILON {
+        filters.push("atempo=2.0".to_string());
+        remaining /= 2.0;
+    }
+    filters.push(format!("atempo={remaining:.4}"));
+    filters.join(",")
+}
+
 fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResult, String> {
     let ffmpeg = PathBuf::from(&request.ffmpeg_path);
     if !ffmpeg.is_file() { return Err("Selecione um ffmpeg.exe válido nas configurações de exportação.".into()); }
@@ -2053,7 +2068,8 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
     let main_clips = request.clips.iter().filter(|clip| clip.media_type == "video" || clip.media_type == "image").collect::<Vec<_>>();
     let audio_clips = request.clips.iter().filter(|clip| clip.media_type == "audio").collect::<Vec<_>>();
     if main_clips.is_empty() { return Err("Adicione pelo menos um vídeo ou imagem à timeline antes de exportar.".into()); }
-    let mut durations = Vec::new();
+    let mut source_durations = Vec::new();
+    let mut render_durations = Vec::new();
     let mut main_paths = Vec::new();
     let mut source_audio = Vec::new();
     for clip in &main_clips {
@@ -2062,7 +2078,9 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         let duration = (clip.end - clip.start).max(0.0).min(clip.duration.max(0.0));
         if !duration.is_finite() || duration <= 0.05 { return Err(format!("O segmento '{}' tem duração inválida.", path.display())); }
         let has_audio = clip.media_type == "video" && !clip.audio_muted.unwrap_or(false) && ffprobe_has_audio(&ffmpeg, &path);
-        durations.push(duration);
+        let speed = if clip.media_type == "image" { 1.0 } else { clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0) };
+        source_durations.push(duration);
+        render_durations.push(duration / speed);
         main_paths.push(path);
         source_audio.push(has_audio);
     }
@@ -2071,19 +2089,20 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
     for clip in &audio_clips {
         if clip.audio_muted.unwrap_or(false) { continue; }
         let path = media_map.get(clip.media_id.as_str()).ok_or_else(|| format!("A mídia de áudio '{}' não está no projeto.", clip.media_id))?.canonicalize().map_err(|error| format!("Áudio indisponível: {error}"))?;
-        let duration = (clip.end - clip.start).max(0.0).min(clip.duration.max(0.0));
-        if !path.is_file() || duration <= 0.05 { continue; }
-        audio_paths.push(path); audio_durations.push(duration);
+        let source_duration = (clip.end - clip.start).max(0.0).min(clip.duration.max(0.0));
+        if !path.is_file() || source_duration <= 0.05 { continue; }
+        let speed = clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0);
+        audio_paths.push(path); audio_durations.push(source_duration / speed);
     }
 
     let mut command = Command::new(&ffmpeg);
     command.args(["-y", "-hide_banner", "-loglevel", "error"]);
     for (index, clip) in main_clips.iter().enumerate() {
         if clip.media_type == "image" {
-            command.args(["-loop", "1", "-framerate", &fps.to_string(), "-t", &format!("{:.4}", durations[index]), "-i"]);
+            command.args(["-loop", "1", "-framerate", &fps.to_string(), "-t", &format!("{:.4}", render_durations[index]), "-i"]);
             command.arg(&main_paths[index]);
         } else {
-            command.args(["-ss", &format!("{:.4}", clip.start.max(0.0)), "-t", &format!("{:.4}", durations[index]), "-i"]);
+            command.args(["-ss", &format!("{:.4}", clip.start.max(0.0)), "-t", &format!("{:.4}", source_durations[index]), "-i"]);
             command.arg(&main_paths[index]);
         }
     }
@@ -2093,7 +2112,7 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
     for (index, clip) in main_clips.iter().enumerate() {
         if source_audio[index] { audio_input_indices.push(index); }
         else {
-            command.args(["-f", "lavfi", "-t", &format!("{:.4}", durations[index]), "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]);
+            command.args(["-f", "lavfi", "-t", &format!("{:.4}", render_durations[index]), "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]);
             audio_input_indices.push(next_input); next_input += 1;
         }
         let _ = clip;
@@ -2111,7 +2130,7 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
     let mut video_labels = Vec::new();
     let mut base_audio_labels = Vec::new();
     for (index, clip) in main_clips.iter().enumerate() {
-        let speed = clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0);
+        let speed = if clip.media_type == "image" { 1.0 } else { clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0) };
         let brightness = ((clip.color_brightness.unwrap_or(100.0).clamp(50.0, 150.0) - 100.0) / 100.0).clamp(-0.5, 0.5);
         let contrast = (clip.color_contrast.unwrap_or(100.0).clamp(50.0, 150.0) / 100.0).clamp(0.5, 1.5);
         let saturation = (clip.color_saturation.unwrap_or(100.0).clamp(0.0, 200.0) / 100.0).clamp(0.0, 2.0);
@@ -2119,17 +2138,17 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         video_labels.push(format!("[v{index}]"));
         let audio_index = audio_input_indices[index];
         let gain = if clip.audio_muted.unwrap_or(false) { 0.0 } else { clip.audio_gain.unwrap_or(1.0).clamp(0.0, 2.0) };
-        let mut chain = format!("[{audio_index}:a:0]atrim=duration={:.4},asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo,volume={gain:.4}", durations[index]);
-        let fade_in = clip.audio_fade_in.unwrap_or(0.0).clamp(0.0, durations[index]);
-        let fade_out = clip.audio_fade_out.unwrap_or(0.0).clamp(0.0, durations[index]);
+        let mut chain = format!("[{audio_index}:a:0]atrim=duration={:.4},asetpts=PTS-STARTPTS,{},aresample=48000,aformat=channel_layouts=stereo,volume={gain:.4}", source_durations[index], atempo_chain(speed));
+        let fade_in = clip.audio_fade_in.unwrap_or(0.0).clamp(0.0, render_durations[index]);
+        let fade_out = clip.audio_fade_out.unwrap_or(0.0).clamp(0.0, render_durations[index]);
         if fade_in > 0.0 { chain.push_str(&format!(",afade=t=in:st=0:d={fade_in:.4}")); }
-        if fade_out > 0.0 { chain.push_str(&format!(",afade=t=out:st={:.4}:d={fade_out:.4}", (durations[index] - fade_out).max(0.0))); }
+        if fade_out > 0.0 { chain.push_str(&format!(",afade=t=out:st={:.4}:d={fade_out:.4}", (render_durations[index] - fade_out).max(0.0))); }
         chain.push_str(&format!("[a{index}]"));
         filters.push(chain);
         base_audio_labels.push(format!("[a{index}]"));
     }
     filters.push(format!("{}concat=n={}:v=1:a=1[vout][abase]", video_labels.iter().zip(base_audio_labels.iter()).map(|(v,a)| format!("{v}{a}")).collect::<String>(), main_clips.len()));
-    let total_duration: f64 = durations.iter().sum();
+    let total_duration: f64 = render_durations.iter().sum();
     let mut extra_audio_labels = Vec::new();
     // Audio items are placed sequentially from the beginning of the soundtrack. This first
     // renderer intentionally does not claim arbitrary drag positioning or layered transitions.
@@ -2138,9 +2157,11 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         if index >= audio_track_indices.len() { break; }
         let audio_index = audio_track_indices[index];
         let duration = audio_durations[index];
+        let speed = clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0);
+        let source_duration = (clip.end - clip.start).max(0.0).min(clip.duration.max(0.0));
         let gain = clip.audio_gain.unwrap_or(1.0).clamp(0.0, 2.0);
         let delay_ms = (audio_cursor * 1000.0).round() as u64;
-        let mut chain = format!("[{audio_index}:a:0]atrim=duration={duration:.4},asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo,volume={gain:.4}");
+        let mut chain = format!("[{audio_index}:a:0]atrim=duration={source_duration:.4},asetpts=PTS-STARTPTS,{},aresample=48000,aformat=channel_layouts=stereo,volume={gain:.4}", atempo_chain(speed));
         if clip.audio_fade_in.unwrap_or(0.0) > 0.0 { chain.push_str(&format!(",afade=t=in:st=0:d={:.4}", clip.audio_fade_in.unwrap().clamp(0.0, duration))); }
         if clip.audio_fade_out.unwrap_or(0.0) > 0.0 { let fade = clip.audio_fade_out.unwrap().clamp(0.0, duration); chain.push_str(&format!(",afade=t=out:st={:.4}:d={fade:.4}", (duration-fade).max(0.0))); }
         chain.push_str(&format!(",adelay={delay_ms}|{delay_ms}[extra{index}]"));
@@ -2245,6 +2266,25 @@ pub fn run() {
         .expect("erro ao iniciar o Edit Master");
 }
 
+
+#[cfg(test)]
+mod export_timing_tests {
+    use super::atempo_chain;
+
+    #[test]
+    fn builds_supported_atempo_chains_for_slow_motion() {
+        assert_eq!(atempo_chain(0.25), "atempo=0.5,atempo=0.5000");
+        assert_eq!(atempo_chain(0.5), "atempo=0.5000");
+        assert_eq!(atempo_chain(1.0), "atempo=1.0000");
+        assert_eq!(atempo_chain(2.0), "atempo=2.0000");
+    }
+
+    #[test]
+    fn clamps_speed_to_the_supported_editor_range() {
+        assert_eq!(atempo_chain(0.1), atempo_chain(0.25));
+        assert_eq!(atempo_chain(3.0), atempo_chain(2.0));
+    }
+}
 
 #[cfg(test)]
 mod audio_extraction_tests {
