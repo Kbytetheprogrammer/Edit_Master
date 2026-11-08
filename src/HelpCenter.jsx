@@ -59,7 +59,7 @@ const lessons = [
       'Selecione o clipe de áudio para abrir os controles correspondentes no Inspetor.',
       'Ajuste o ganho/volume e, quando disponíveis, os fades de entrada e saída.',
       'A exportação atual mistura faixas de áudio em uma montagem básica. Confira o resultado e o sincronismo antes de publicar.',
-      'A extração de uma faixa de áudio diretamente de um vídeo para um arquivo independente ainda precisa ser implementada nesta linha de desenvolvimento.'
+      'Use o botão **Extrair áudio de mídia** na Biblioteca. Escolha a origem, selecione MP3, WAV, FLAC, AAC ou OGG e indique onde salvar. O FFmpeg precisa estar configurado. Se a origem não tiver faixa de áudio, o aplicativo mostrará a falha sem substituir o original.'
     ]
   },
   {
