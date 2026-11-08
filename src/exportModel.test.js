@@ -43,9 +43,10 @@ test('rejects clips without a permanent source path', () => {
   assert.match(result.reason, /caminho permanente/i);
 });
 
-test('rejects unsupported media types', () => {
-  const badClips = [{ ...clips[0], type: 'document' }];
-  const result = createExportRequest(media, badClips, 'ffmpeg.exe', 'video.mp4');
+test('rejects unsupported media types even when a valid visual clip exists', () => {
+  const expandedMedia = [...media, { id: 'd1', name: 'file.bin', type: 'document', sourcePath: 'C:/media/file.bin' }];
+  const mixedClips = [...clips, { clipId: 'c2', mediaId: 'd1', name: 'file.bin', type: 'document', duration: 5, start: 0, end: 5 }];
+  const result = createExportRequest(expandedMedia, mixedClips, 'ffmpeg.exe', 'video.mp4');
   assert.equal(result.ok, false);
   assert.match(result.reason, /ainda não pode ser exportado/i);
 });
