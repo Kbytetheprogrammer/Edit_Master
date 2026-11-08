@@ -1289,12 +1289,15 @@ function translateNode(node, language) {
   if (!React.isValidElement(node)) return node;
   if (node.props.translate === 'no' || node.props['data-no-translate'] === true) return node;
 
-  const props = {};
-  for (const [key, value] of Object.entries(node.props)) {
-    if (key === 'children') {
-      props.children = translateNode(value, language);
-    } else if (attributeNames.has(key) && typeof value === 'string') {
-      props[key] = translateText(value, language);
+  // Preserve every original prop (className, style, event handlers, refs, keys, etc.).
+  // Only translate visible children and the small set of user-facing text attributes.
+  const props = { ...node.props };
+  if (Object.prototype.hasOwnProperty.call(node.props, 'children')) {
+    props.children = translateNode(node.props.children, language);
+  }
+  for (const key of attributeNames) {
+    if (typeof node.props[key] === 'string') {
+      props[key] = translateText(node.props[key], language);
     }
   }
   return React.cloneElement(node, props);
