@@ -178,7 +178,7 @@ function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = []
   return <div className="ai-hub-body">
     <div className="ai-hub-intro"><div className="ai-hub-mark"><Sparkles size={26}/></div><div><span className="eyebrow">EDIT MASTER INTELLIGENCE</span><h3>AI Hub</h3><p>Escolha o mecanismo para criar, revisar ou traduzir legendas.</p></div></div>
     <div className="ai-provider-grid">
-      {PROVIDERS.map(item => { const Icon = item.icon; return <button type="button" key={item.id} className={`ai-provider-card ${provider === item.id ? 'selected' : ''}`} onClick={() => setProvider(item.id)}><div className="ai-provider-icon"><Icon size={20}/></div><div><b>{item.name}</b><small>{item.brand}</small></div>{provider === item.id && <CheckCircle2 className="ai-provider-check" size={16}/>}<span>{item.subtitle}</span></button>; })}
+      {PROVIDERS.map(item => { const Icon = item.icon; return <button type="button" key={item.id} className={`ai-provider-card ${provider === item.id ? 'selected' : ''}`} onClick={() => setProvider(item.id)}><div className="ai-provider-icon"><Icon size={20}/></div><div><b translate="no">{item.name}</b><small>{item.brand}</small></div>{provider === item.id && <CheckCircle2 className="ai-provider-check" size={16}/>}<span>{item.subtitle}</span></button>; })}
     </div>
     <div className="ai-provider-description"><b>{selectedProvider.name}</b><span>{selectedProvider.description}</span></div>
     {provider !== 'local' && <section className="ai-config-section">
@@ -198,7 +198,7 @@ function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = []
       <label className="ai-field-label">Vídeo ou áudio</label>
       <select className="ai-select" value={targetId} onChange={event => { setTargetId(event.target.value); onSelectMedia?.(event.target.value); }}>
         <option value="">Selecione uma mídia importada</option>
-        {availableMedia.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+        {availableMedia.map(item => <option translate="no" key={item.id} value={item.id}>{item.name}</option>)}
       </select>
       <div className="ai-fields-two"><div><label className="ai-field-label">Idioma do áudio</label><input className="ai-text-input" value={language} onChange={event => setLanguage(event.target.value)} placeholder="pt, en ou auto"/></div><div><label className="ai-field-label">Idioma de tradução</label><input className="ai-text-input" value={targetLanguage} onChange={event => setTargetLanguage(event.target.value)} placeholder="English, Português…"/></div></div>
       {provider === 'claude' ? <div className="ai-task-note"><Languages size={14}/> Claude revisa ou traduz legendas existentes. Primeiro gere ou importe um SRT com outro provedor.</div> : <div className="ai-task-note"><Mic2 size={14}/> {provider === 'gpt' ? 'O GPT retorna texto; os tempos das legendas serão estimados pela duração do arquivo nesta versão.' : provider === 'gemini' ? 'O Gemini pode retornar segmentos com tempos; a qualidade dos tempos depende da resposta da API.' : 'Whisper gera um arquivo SRT localmente, sem enviar seu áudio à nuvem.'}</div>}
