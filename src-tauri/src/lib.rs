@@ -341,6 +341,20 @@ fn register_media_paths(
     Ok(media)
 }
 
+#[tauri::command]
+fn move_media_to_recycle_bin(file_path: String) -> Result<(), String> {
+    let file = PathBuf::from(file_path)
+        .canonicalize()
+        .map_err(|error| format!("Não foi possível acessar o arquivo selecionado: {error}"))?;
+
+    if !file.is_file() || supported_media_type(&file).is_none() {
+        return Err("O caminho selecionado não é um arquivo de mídia compatível.".into());
+    }
+
+    trash::delete(&file)
+        .map_err(|error| format!("O Windows não conseguiu enviar a mídia à Lixeira: {error}"))
+}
+
 fn safe_asset_folder_name(stem: &str) -> String {
     let cleaned = stem.chars()
         .map(|character| if character.is_ascii_alphanumeric() || character == '-' || character == '_' { character } else { '_' })
