@@ -422,7 +422,7 @@ Object.assign(dictionaries.en, {
   '03 / CONTROLES':'03 / CONTROLS','04 / MONTAGEM':'04 / EDITING','STOCK':'STOCK','Motion':'Motion',
   'Extrair áudio de mídia':'Extract audio from media','Procurar vídeos duplicados':'Find duplicate videos',
   'Selecionar arquivos':'Select files','Fade-out · segundos':'Fade-out · seconds',
-  'Volume e silêncio afetam a prévia. Os fades ficam salvos no projeto, mas ainda aguardam o motor de renderização para serem aplicados no MP4.':'Volume and mute affect the preview. Fades are saved in the project, but still need the render engine to be applied to the MP4.',
+  'Volume e silêncio afetam a prévia. Os fades ficam salvos no projeto, mas ainda aguardam o motor de renderização para serem aplicados no MP4.':'Volume and mute affect the preview and export. Fade-in and fade-out are applied to the exported MP4.',
   'Os ajustes aparecem na prévia e ficam salvos no projeto. A composição de camadas no vídeo exportado virá com o renderizador.':'Settings appear in the preview and are saved in the project. Layer compositing in exported video will come with the renderer.',
   'Os keyframes são interpolados linearmente no tempo original da mídia. A prévia mostra a transformação animada; a exportação final ainda não está disponível.':'Keyframes are interpolated linearly in the media original time. The preview shows the animated transform; final export is not yet available.',
   'Correções de cor e velocidade são aplicadas na prévia e salvas no projeto. A exportação MP4 atual aplica apenas parte dos efeitos disponíveis.':'Color and speed corrections are applied in the preview and saved in the project. Current MP4 export applies only some of the available effects.',
