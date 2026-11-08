@@ -1345,6 +1345,69 @@ fn default_export_height() -> u32 { 1080 }
 fn default_export_fps() -> u32 { 60 }
 fn default_export_crf() -> u32 { 20 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ExtractAudioRequest {
+    ffmpeg_path: String,
+    input_path: String,
+    output_path: String,
+    format: String,
+}
+
+fn audio_codec_args(format: &str) -> Result<Vec<&'static str>, String> {
+    match format {
+        "mp3" => Ok(vec!["-c:a", "libmp3lame", "-b:a", "192k"]),
+        "wav" => Ok(vec!["-c:a", "pcm_s16le"]),
+        "flac" => Ok(vec!["-c:a", "flac"]),
+        "aac" => Ok(vec!["-c:a", "aac", "-b:a", "192k"]),
+        "ogg" => Ok(vec!["-c:a", "libvorbis", "-q:a", "5"]),
+        _ => Err("Formato não suportado. Escolha MP3, WAV, FLAC, AAC ou OGG.".into()),
+    }
+}
+
+fn extract_audio_blocking(request: ExtractAudioRequest) -> Result<String, String> {
+    let ffmpeg = PathBuf::from(&request.ffmpeg_path);
+    if !ffmpeg.is_file() { return Err("Selecione um ffmpeg.exe válido.".into()); }
+    let input = PathBuf::from(&request.input_path);
+    if !input.is_file() { return Err("O arquivo de origem não foi encontrado.".into()); }
+    let format = request.format.trim().to_ascii_lowercase();
+    let codec_args = audio_codec_args(&format)?;
+    let output = PathBuf::from(&request.output_path);
+    let extension = output.extension().and_then(|value| value.to_str()).unwrap_or("").to_ascii_lowercase();
+    if extension != format { return Err("A extensão do arquivo de destino não corresponde ao formato escolhido.".into()); }
+    if let (Ok(source), Ok(destination)) = (input.canonicalize(), output.canonicalize()) {
+        if source == destination { return Err("O arquivo de destino não pode substituir o arquivo original.".into()); }
+    }
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent).map_err(|error| format!("Não foi possível criar a pasta de destino: {error}"))?;
+    }
+    let mut command = Command::new(&ffmpeg);
+    command.args(["-hide_banner", "-nostdin", "-y", "-i"])
+        .arg(&input)
+        .args(["-map", "0:a:0", "-vn"])
+        .args(codec_args)
+        .arg(&output);
+    let result = command.output().map_err(|error| format!("Não foi possível iniciar o FFmpeg: {error}"))?;
+    if !result.status.success() {
+        let details = String::from_utf8_lossy(&result.stderr);
+        let _ = fs::remove_file(&output);
+        return Err(format!("O FFmpeg não conseguiu extrair uma faixa de áudio: {}", details.chars().rev().take(900).collect::<String>().chars().rev().collect::<String>()));
+    }
+    if !output.is_file() || output.metadata().map(|meta| meta.len() == 0).unwrap_or(true) {
+        let _ = fs::remove_file(&output);
+        return Err("O FFmpeg terminou sem produzir um arquivo de áudio válido.".into());
+    }
+    Ok(output.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+async fn extract_audio_file(request: ExtractAudioRequest) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let output_path = extract_audio_blocking(request)?;
+        Ok(serde_json::json!({ "outputPath": output_path }))
+    }).await.map_err(|error| format!("A extração de áudio foi interrompida: {error}"))?
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ExportResult {
@@ -2056,9 +2119,30 @@ pub fn run() {
             youtube_disconnect,
             youtube_connect,
             upload_video_to_youtube,
+            extract_audio_file,
             export_timeline_mp4,
             get_app_version
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o Edit Master");
+}
+
+
+#[cfg(test)]
+mod audio_extraction_tests {
+    use super::audio_codec_args;
+
+    #[test]
+    fn supports_all_advertised_audio_formats() {
+        for format in ["mp3", "wav", "flac", "aac", "ogg"] {
+            assert!(audio_codec_args(format).is_ok(), "format should be supported: {format}");
+        }
+    }
+
+    #[test]
+    fn rejects_unknown_audio_formats() {
+        for format in ["", "mp4", "exe", "../mp3"] {
+            assert!(audio_codec_args(format).is_err(), "format should be rejected: {format}");
+        }
+    }
 }
