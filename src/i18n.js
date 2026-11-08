@@ -853,6 +853,40 @@ Object.assign(dictionaries.es, {
   'Processando…':'Procesando…','pt, en ou auto':'pt, en o automático','English, Português…':'Inglés, portugués…',
   '. Áudios fornecidos por':'. Audio proporcionado por'
 });
+Object.assign(dictionaries.en, {
+  'Informe o Client ID e o Client Secret do aplicativo OAuth do Google.':'Enter the Google OAuth app Client ID and Client Secret.',
+  'Salvar áudio extraído':'Save extracted audio','Salvar áudio':'Save audio',
+  'Nenhum arquivo':'No files','Nenhum resultado':'No results',
+  'O armazenamento seguro de chaves está configurado para o Windows nesta versão.':'Secure key storage is configured for Windows in this version.',
+  'A conexão com o YouTube está habilitada no Windows nesta versão.':'YouTube connection is enabled on Windows in this version.',
+  'As integrações protegidas do AI Hub estão disponíveis no instalador Windows nesta versão.':'Protected AI Hub integrations are available in the Windows installer in this version.',
+  'O Media Hub com credenciais protegidas está habilitado para Windows nesta versão.':'Media Hub with protected credentials is enabled for Windows in this version.',
+  'A instalação de atualizações locais está disponível apenas no Windows nesta versão.':'Local update installation is available only on Windows in this version.',
+  'A desinstalação pelo aplicativo está configurada apenas para Windows nesta versão.':'In-app uninstall is configured only for Windows in this version.',
+  'A transcrição local foi interrompida: {error}':'Local transcription was interrupted: {error}',
+  'A tarefa de transcrição foi interrompida: {error}':'The transcription task was interrupted: {error}',
+  'A tarefa de revisão foi interrompida: {error}':'The review task was interrupted: {error}',
+  'A exportação foi interrompida: {error}':'Export was interrupted: {error}',
+  'A extração de áudio foi interrompida: {error}':'Audio extraction was interrupted: {error}',
+  'O upload terminou sem uma confirmação de vídeo do YouTube.':'The upload ended without a YouTube video confirmation.'
+});
+Object.assign(dictionaries.es, {
+  'Informe o Client ID e o Client Secret do aplicativo OAuth do Google.':'Introduce el Client ID y el Client Secret de la aplicación OAuth de Google.',
+  'Salvar áudio extraído':'Guardar audio extraído','Salvar áudio':'Guardar audio',
+  'Nenhum arquivo':'No hay archivos','Nenhum resultado':'No hay resultados',
+  'O armazenamento seguro de chaves está configurado para o Windows nesta versão.':'El almacenamiento seguro de claves está configurado para Windows en esta versión.',
+  'A conexão com o YouTube está habilitada no Windows nesta versão.':'La conexión con YouTube está habilitada en Windows en esta versión.',
+  'As integrações protegidas do AI Hub estão disponíveis no instalador Windows nesta versão.':'Las integraciones protegidas de AI Hub están disponibles en el instalador de Windows en esta versión.',
+  'O Media Hub com credenciais protegidas está habilitado para Windows nesta versão.':'Media Hub con credenciales protegidas está habilitado para Windows en esta versión.',
+  'A instalação de atualizações locais está disponível apenas no Windows nesta versão.':'La instalación de actualizaciones locales solo está disponible en Windows en esta versión.',
+  'A desinstalação pelo aplicativo está configurada apenas para Windows nesta versão.':'La desinstalación desde la aplicación solo está configurada para Windows en esta versión.',
+  'A transcrição local foi interrompida: {error}':'La transcripción local se interrumpió: {error}',
+  'A tarefa de transcrição foi interrompida: {error}':'La tarea de transcripción se interrumpió: {error}',
+  'A tarefa de revisão foi interrompida: {error}':'La tarea de revisión se interrumpió: {error}',
+  'A exportação foi interrompida: {error}':'La exportación se interrumpió: {error}',
+  'A extração de áudio foi interrompida: {error}':'La extracción de audio se interrumpió: {error}',
+  'O upload terminou sem uma confirmação de vídeo do YouTube.':'La carga terminó sin confirmación del vídeo de YouTube.'
+});
 const attributeNames = new Set([
   'placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'label',
   'description', 'helperText', 'emptyLabel'
