@@ -59,7 +59,7 @@ const lessons = [
       'Selecione o clipe de áudio para abrir os controles correspondentes no Inspetor.',
       'Ajuste o ganho/volume e, quando disponíveis, os fades de entrada e saída.',
       'A exportação atual mistura faixas de áudio em uma montagem básica. Confira o resultado e o sincronismo antes de publicar.',
-      'Use o botão **Extrair áudio de mídia** na Biblioteca. Escolha a origem, selecione MP3, WAV, FLAC, AAC ou OGG e indique onde salvar. O FFmpeg precisa estar configurado. Se a origem não tiver faixa de áudio, o aplicativo mostrará a falha sem substituir o original.'
+      'Use o botão **Extrair áudio de mídia** na Biblioteca. Escolha a origem, selecione MP3, WAV, FLAC, AAC ou OGG e indique onde salvar. O FFmpeg e o FFprobe incluídos no instalador são detectados automaticamente; você também pode selecionar outra instalação. Se a origem não tiver faixa de áudio, o aplicativo mostrará a falha sem substituir o original.'
     ]
   },
   {
@@ -80,7 +80,7 @@ const lessons = [
       'Abra o AI Hub e selecione a mídia que deseja transcrever.',
       'É possível importar legendas SRT existentes e aplicar os trechos ao projeto.',
       'Os horários definem quando cada legenda aparece e desaparece.',
-      'A transcrição local exige whisper-cli.exe, um modelo Whisper .bin e FFmpeg acessível. Nesta versão esses componentes ainda precisam ser selecionados/configurados pelo usuário.',
+      'O instalador da versão candidata inclui whisper-cli.exe e o modelo Tiny, e o aplicativo tenta detectá-los automaticamente. Se algum componente não for encontrado, selecione o executável e o modelo manualmente nas configurações do AI Hub.',
       'Revise nomes, pontuação, sincronização e tradução antes de usar as legendas.'
     ]
   },
@@ -110,7 +110,7 @@ const lessons = [
     level: 'Intermediário',
     steps: [
       'Antes de exportar, confirme que a Timeline contém pelo menos um vídeo ou uma imagem e que os arquivos de origem continuam acessíveis.',
-      'Abra Exportar MP4 e selecione um ffmpeg.exe confiável. FFmpeg e FFprobe precisam estar disponíveis; nesta versão o instalador ainda não os inclui automaticamente.',
+      'Abra Exportar MP4. FFmpeg e FFprobe incluídos no instalador são detectados automaticamente; se necessário, selecione um ffmpeg.exe confiável manualmente.',
       'A predefinição de destino é Full HD 1920 × 1080 a 60 FPS, com vídeo H.264 e áudio AAC.',
       'Escolha um destino com extensão .mp4 e aguarde a conclusão.',
       'A renderização atual concatena os segmentos visuais em sequência e mistura áudio de forma básica. Ela ainda não reproduz integralmente todas as camadas, transições e títulos da prévia.'
@@ -167,7 +167,7 @@ function HelpCenter({ onClose }) {
       </div>
       <div className="help-course-note">
         <b>Nota sobre a versão 1.0</b>
-        <p>Este curso descreve o comportamento atualmente implementado. Extração de áudio como ferramenta independente, FFmpeg/FFprobe e Whisper pré-instalados, renderização completa de camadas e instalação sem configuração ainda precisam ser concluídos e testados antes de anunciar a versão 1.0 final.</p>
+        <p>Este curso descreve o comportamento da versão candidata. O instalador inclui FFmpeg/FFprobe e Whisper Tiny; a detecção automática desses recursos ainda precisa ser validada no Windows. A exportação MP4 ainda não reproduz todas as sobreposições, transições, títulos e animações da prévia. O atualizador pela internet também precisa ser implementado e validado antes do lançamento final.</p>
       </div>
       <button className="export-button" onClick={onClose}>Concluir curso</button>
     </div>
