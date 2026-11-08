@@ -1258,3 +1258,79 @@ button:focus-visible,
 :root[data-theme="mixed"] .media-tabs button.active-tab { border-color: #111 !important; }
 :root[data-theme="mixed"] .lane { background-color: #e9e9e9; border-color: #ccc; }
 :root[data-theme="mixed"] .clip { color: #111; }
+
+
+/* Theme completeness and contrast pass; selected theme lives on html[data-theme]. */
+html[data-theme="green"] { --orange:#22c55e; --orange2:#facc15; }
+html[data-theme="green"] .settings-section-title,
+html[data-theme="green"] .settings-section-title svg,
+html[data-theme="green"] .media-tabs button.active-tab,
+html[data-theme="green"] .track-labels svg { color:#facc15 !important; }
+html[data-theme="green"] .media-tabs button.active-tab { border-color:#22c55e !important; }
+html[data-theme="green"] .version, html[data-theme="green"] .settings-tag { color:#fde68a !important; }
+html[data-theme="green"] input[type="range"], html[data-theme="green"] .settings-switch input { accent-color:#22c55e !important; }
+
+html[data-theme="black"] { color-scheme:dark; --bg:#000; --panel:#050505; --panel2:#0b0b0b; --line:#242424; --muted:#aaa; --orange:#eee; --orange2:#fff; }
+html[data-theme="black"] body, html[data-theme="black"] .app-shell, html[data-theme="black"] .topbar,
+html[data-theme="black"] .menu-row, html[data-theme="black"] .statusbar, html[data-theme="black"] .timeline-panel,
+html[data-theme="black"] .panel, html[data-theme="black"] .modal-card, html[data-theme="black"] .settings-body,
+html[data-theme="black"] .settings-row, html[data-theme="black"] .inspector-file, html[data-theme="black"] .inspector-value,
+html[data-theme="black"] .search-box, html[data-theme="black"] .settings-select, html[data-theme="black"] .project-pill,
+html[data-theme="black"] .preview-stage, html[data-theme="black"] .lane, html[data-theme="black"] .track-labels,
+html[data-theme="black"] .track-lanes { background:#000 !important; color:#f2f2f2 !important; border-color:#242424 !important; }
+html[data-theme="black"] .panel *, html[data-theme="black"] .modal-card *, html[data-theme="black"] .timeline-panel *,
+html[data-theme="black"] .menu-row *, html[data-theme="black"] .topbar *, html[data-theme="black"] .statusbar * { color:inherit; }
+html[data-theme="black"] .eyebrow, html[data-theme="black"] .settings-row p, html[data-theme="black"] .empty-media span,
+html[data-theme="black"] .preview-empty span, html[data-theme="black"] .inspector-empty span, html[data-theme="black"] .track-hint,
+html[data-theme="black"] .timeline-footer, html[data-theme="black"] .scrub-row { color:#aaa !important; }
+html[data-theme="black"] .export-button, html[data-theme="black"] .play-button, html[data-theme="black"] .brand-mark,
+html[data-theme="black"] .preview-logo { background:#eee !important; color:#000 !important; }
+html[data-theme="black"] .import-button, html[data-theme="black"] .empty-icon, html[data-theme="black"] .quick-tips,
+html[data-theme="black"] .add-clip, html[data-theme="black"] .subtle-button, html[data-theme="black"] .language-choice {
+ background:#111 !important; color:#eee !important; border-color:#333 !important; }
+html[data-theme="black"] input, html[data-theme="black"] textarea, html[data-theme="black"] select { color-scheme:dark; }
+html[data-theme="black"] input[type="range"], html[data-theme="black"] .settings-switch input { accent-color:#eee !important; }
+
+html[data-theme="white"] { color-scheme:light; --bg:#fff; --panel:#fff; --panel2:#f7f7f7; --line:#ddd; --muted:#555; --orange:#171717; --orange2:#333; }
+html[data-theme="white"] body, html[data-theme="white"] .app-shell, html[data-theme="white"] .topbar,
+html[data-theme="white"] .menu-row, html[data-theme="white"] .statusbar, html[data-theme="white"] .timeline-panel,
+html[data-theme="white"] .panel, html[data-theme="white"] .modal-card, html[data-theme="white"] .settings-body,
+html[data-theme="white"] .settings-row, html[data-theme="white"] .inspector-file, html[data-theme="white"] .inspector-value,
+html[data-theme="white"] .search-box, html[data-theme="white"] .settings-select, html[data-theme="white"] .project-pill,
+html[data-theme="white"] .preview-stage, html[data-theme="white"] .lane, html[data-theme="white"] .track-labels,
+html[data-theme="white"] .track-lanes { background:#fff !important; color:#111 !important; border-color:#ddd !important; }
+html[data-theme="white"] .panel *, html[data-theme="white"] .modal-card *, html[data-theme="white"] .timeline-panel *,
+html[data-theme="white"] .menu-row *, html[data-theme="white"] .topbar *, html[data-theme="white"] .statusbar * { color:inherit; }
+html[data-theme="white"] .eyebrow, html[data-theme="white"] .settings-row p, html[data-theme="white"] .empty-media span,
+html[data-theme="white"] .preview-empty span, html[data-theme="white"] .inspector-empty span, html[data-theme="white"] .track-hint,
+html[data-theme="white"] .timeline-footer, html[data-theme="white"] .scrub-row { color:#555 !important; }
+html[data-theme="white"] .export-button, html[data-theme="white"] .play-button, html[data-theme="white"] .brand-mark,
+html[data-theme="white"] .preview-logo { background:#111 !important; color:#fff !important; }
+html[data-theme="white"] .import-button, html[data-theme="white"] .empty-icon, html[data-theme="white"] .quick-tips,
+html[data-theme="white"] .add-clip, html[data-theme="white"] .subtle-button, html[data-theme="white"] .language-choice {
+ background:#f4f4f4 !important; color:#111 !important; border-color:#ccc !important; }
+html[data-theme="white"] input, html[data-theme="white"] textarea, html[data-theme="white"] select { color-scheme:light; }
+html[data-theme="white"] input[type="range"], html[data-theme="white"] .settings-switch input { accent-color:#111 !important; }
+
+html[data-theme="mixed"] { color-scheme:light; --bg:#090909; --panel:#f2f2f2; --panel2:#e7e7e7; --line:#c8c8c8; --muted:#555; --orange:#fff; --orange2:#eee; }
+html[data-theme="mixed"] body, html[data-theme="mixed"] .app-shell, html[data-theme="mixed"] .topbar,
+html[data-theme="mixed"] .menu-row, html[data-theme="mixed"] .statusbar {
+ background:#090909 !important; color:#f5f5f5 !important; border-color:#333 !important; }
+html[data-theme="mixed"] .panel, html[data-theme="mixed"] .modal-card, html[data-theme="mixed"] .settings-body,
+html[data-theme="mixed"] .settings-row, html[data-theme="mixed"] .inspector-file, html[data-theme="mixed"] .inspector-value,
+html[data-theme="mixed"] .search-box, html[data-theme="mixed"] .settings-select, html[data-theme="mixed"] .project-pill,
+html[data-theme="mixed"] .preview-stage, html[data-theme="mixed"] .lane, html[data-theme="mixed"] .track-labels,
+html[data-theme="mixed"] .track-lanes {
+ background:#f2f2f2 !important; color:#111 !important; border-color:#c8c8c8 !important; }
+html[data-theme="mixed"] .panel *, html[data-theme="mixed"] .modal-card *, html[data-theme="mixed"] .timeline-panel *,
+html[data-theme="mixed"] .project-pill, html[data-theme="mixed"] .settings-select { color:#111; }
+html[data-theme="mixed"] .eyebrow, html[data-theme="mixed"] .settings-row p, html[data-theme="mixed"] .empty-media span,
+html[data-theme="mixed"] .preview-empty span, html[data-theme="mixed"] .inspector-empty span, html[data-theme="mixed"] .track-hint,
+html[data-theme="mixed"] .timeline-footer, html[data-theme="mixed"] .scrub-row { color:#555 !important; }
+html[data-theme="mixed"] .export-button, html[data-theme="mixed"] .play-button, html[data-theme="mixed"] .brand-mark,
+html[data-theme="mixed"] .preview-logo { background:#fff !important; color:#000 !important; }
+html[data-theme="mixed"] .import-button, html[data-theme="mixed"] .empty-icon, html[data-theme="mixed"] .quick-tips,
+html[data-theme="mixed"] .add-clip, html[data-theme="mixed"] .subtle-button, html[data-theme="mixed"] .language-choice {
+ background:#e4e4e4 !important; color:#111 !important; border-color:#bbb !important; }
+html[data-theme="mixed"] input, html[data-theme="mixed"] textarea, html[data-theme="mixed"] select { color-scheme:light; }
+html[data-theme="mixed"] input[type="range"], html[data-theme="mixed"] .settings-switch input { accent-color:#111 !important; }
