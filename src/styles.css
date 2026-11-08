@@ -1334,3 +1334,12 @@ html[data-theme="mixed"] .add-clip, html[data-theme="mixed"] .subtle-button, htm
  background:#e4e4e4 !important; color:#111 !important; border-color:#bbb !important; }
 html[data-theme="mixed"] input, html[data-theme="mixed"] textarea, html[data-theme="mixed"] select { color-scheme:light; }
 html[data-theme="mixed"] input[type="range"], html[data-theme="mixed"] .settings-switch input { accent-color:#111 !important; }
+
+
+/* Compact media actions: secondary actions stay inside each library row. */
+.media-item-actions{display:flex;align-items:center;gap:3px;flex-shrink:0}
+.media-trash-button{width:23px;height:23px;display:grid;place-items:center;border-radius:4px;background:transparent;color:#858585;opacity:.72}
+.media-trash-button:hover:not(:disabled){background:#3a211e;color:#ff9b85;opacity:1}
+.media-trash-button:disabled{opacity:.35;cursor:wait}
+.media-item:hover .media-trash-button,.media-item.chosen .media-trash-button{opacity:1}
+.media-item .media-meta{flex:1;min-width:0}
