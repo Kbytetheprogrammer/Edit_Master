@@ -1,4 +1,4 @@
-import { withLocalization } from './i18n.js';
+import { withLocalization, translateText } from './i18n.js';
 import { useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -16,7 +16,7 @@ const MEDIA_TYPES = {
   freesound: [{ id: 'audio', label: 'Áudios' }],
 };
 
-function StockHub({ onMediaAdded, onClose, setNotice }) {
+function StockHub({ onMediaAdded, onClose, setNotice, uiLanguage = 'pt-BR' }) {
   const [provider, setProvider] = useState('pexels');
   const [mediaType, setMediaType] = useState('image');
   const [query, setQuery] = useState('');
@@ -87,7 +87,7 @@ function StockHub({ onMediaAdded, onClose, setNotice }) {
   const addToLibrary = async (item) => {
     setDownloadingId(item.id);
     try {
-      const folder = await open({ directory: true, multiple: false, title: 'Escolha onde salvar a mídia stock' });
+      const folder = await open({ directory: true, multiple: false, title: translateText('Escolha onde salvar a mídia stock', uiLanguage) });
       if (!folder || Array.isArray(folder)) return;
       const downloaded = await invoke('download_stock_media', {
         provider: item.provider,
