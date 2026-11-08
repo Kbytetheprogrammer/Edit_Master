@@ -65,3 +65,23 @@ test('clamps custom export dimensions and frame rate at the native boundary', ()
   assert.equal(result.request.height, 720);
   assert.equal(result.request.fps, 30);
 });
+
+test('refuses to silently omit subtitle and title cues from the exported MP4', () => {
+  const cue = { id: 's1', mediaId: 'v1', start: 1, end: 3, text: 'Olá', kind: 'title' };
+  const result = createExportRequest(media, clips, 'ffmpeg.exe', 'video.mp4', {}, [cue]);
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /títulos ou legendas/i);
+});
+
+test('refuses to silently omit overlay transforms from the exported MP4', () => {
+  const transformed = [{ ...clips[0], overlayX: 70 }];
+  const result = createExportRequest(media, transformed, 'ffmpeg.exe', 'video.mp4');
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /transformações/i);
+});
+
+test('keeps export available for clips with default preview transforms', () => {
+  const defaults = [{ ...clips[0], overlayX: 50, overlayY: 50, overlayScale: 100, overlayOpacity: 100, overlayRotation: 0, colorWarmth: 0, keyframes: [] }];
+  const result = createExportRequest(media, defaults, 'ffmpeg.exe', 'video.mp4');
+  assert.equal(result.ok, true);
+});
