@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 const DIAGNOSTICS_KEY = 'edit-master-runtime-diagnostics';
 const MAX_DIAGNOSTICS = 12;
 const inMemoryDiagnostics = [];
@@ -43,6 +44,13 @@ export function captureRuntimeDiagnostic(error, details = {}) {
     storage?.setItem(DIAGNOSTICS_KEY, JSON.stringify(safePrevious));
   } catch { /* Keep the in-memory copy if WebView storage is unavailable. */ }
   try { console.error('[Edit Master] erro de execução', report); } catch { /* no-op */ }
+  // Persist the error in the native Windows log. This still works when the
+  // React interface later crashes and localStorage becomes unavailable.
+  try {
+    void invoke('write_runtime_diagnostic', { message: report }).catch((nativeError) => {
+      try { console.error('[Edit Master] não foi possível gravar o log nativo', nativeError); } catch { /* no-op */ }
+    });
+  } catch { /* Native bridge may be unavailable during very early startup. */ }
   return report;
 }
 

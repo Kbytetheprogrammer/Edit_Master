@@ -2248,6 +2248,55 @@ async fn export_timeline_mp4(request: ExportTimelineRequest) -> Result<ExportRes
 }
 
 
+
+/// Returns the persistent, user-accessible log path. On Windows this is:
+/// %LOCALAPPDATA%\\Edit Master\\Logs\\edit-master.log
+fn diagnostic_log_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let root = std::env::var_os("LOCALAPPDATA")
+        .map(PathBuf::from)
+        .or_else(|| app.path().app_data_dir().ok())
+        .unwrap_or_else(std::env::temp_dir);
+    let log_dir = root.join("Edit Master").join("Logs");
+    fs::create_dir_all(&log_dir)
+        .map_err(|error| format!("Não foi possível criar a pasta de logs: {error}"))?;
+    Ok(log_dir.join("edit-master.log"))
+}
+
+fn diagnostic_message_excerpt(message: &str) -> String {
+    message.chars().take(20_000).collect()
+}
+
+fn append_diagnostic_log(app: &tauri::AppHandle, message: &str) -> Result<PathBuf, String> {
+    let path = diagnostic_log_path(app)?;
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|error| format!("Não foi possível abrir o log de diagnóstico: {error}"))?;
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    let excerpt = diagnostic_message_excerpt(message);
+    writeln!(file, "[{timestamp}] {excerpt}")
+        .map_err(|error| format!("Não foi possível gravar no log de diagnóstico: {error}"))?;
+    file.flush()
+        .map_err(|error| format!("Não foi possível finalizar a gravação do log: {error}"))?;
+    Ok(path)
+}
+
+#[tauri::command]
+fn write_runtime_diagnostic(app: tauri::AppHandle, message: String) -> Result<String, String> {
+    let path = append_diagnostic_log(&app, &message)?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn get_diagnostic_log_path(app: tauri::AppHandle) -> Result<String, String> {
+    let path = diagnostic_log_path(&app)?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
 #[tauri::command]
 fn get_app_version(app: tauri::AppHandle) -> String { app.package_info().version.to_string() }
 
@@ -2271,16 +2320,53 @@ fn get_bundled_media_tools(app: tauri::AppHandle) -> Result<serde_json::Value, S
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            let app_handle = app.handle();
+            let version = app.package_info().version.to_string();
+            let os = format!("{} {}", std::env::consts::OS, std::env::consts::ARCH);
+            let executable = std::env::current_exe()
+                .ok()
+                .and_then(|path| path.file_name().map(|name| name.to_string_lossy().into_owned()))
+                .unwrap_or_else(|| "desconhecido".to_string());
+
+            if let Err(error) = append_diagnostic_log(
+                app_handle,
+                &format!("\\n=== INICIALIZAÇÃO DO EDIT MASTER ===\\nVersão: {version}\\nSistema: {os}\\nExecutável: {executable}\\nEtapa: processo Rust iniciado; preparando janela e recursos.")
+            ) {
+                eprintln!("[Edit Master] Não foi possível iniciar o arquivo de diagnóstico: {error}");
+            }
+
+            let resource_dir = app.path().resource_dir().ok();
+            let resource_status = if let Some(directory) = resource_dir {
+                let ffmpeg = directory.join("resources").join("ffmpeg").join("ffmpeg.exe").is_file();
+                let ffprobe = directory.join("resources").join("ffmpeg").join("ffprobe.exe").is_file();
+                let whisper = directory.join("resources").join("whisper").join("whisper-cli.exe").is_file();
+                let model = directory.join("resources").join("whisper").join("ggml-tiny.bin").is_file();
+                format!("Recursos: FFmpeg={ffmpeg}, FFprobe={ffprobe}, WhisperCLI={whisper}, ModeloWhisper={model}.")
+            } else {
+                "Recursos: diretório de recursos do aplicativo não localizado.".to_string()
+            };
+            let _ = append_diagnostic_log(app_handle, &resource_status);
+
             if let Some(window) = app.get_webview_window("main") {
-                let decoded_icon = image::load_from_memory(include_bytes!("../icons/icon-m-128.png"))
-                    .map_err(|error| std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        format!("Falha ao carregar o ícone do Edit Master: {error}"),
-                    ))?;
+                let _ = append_diagnostic_log(app_handle, "Etapa: janela principal encontrada; carregando ícone.");
+                let decoded_icon = match image::load_from_memory(include_bytes!("../icons/icon-m-128.png")) {
+                    Ok(icon) => icon,
+                    Err(error) => {
+                        let message = format!("Falha ao carregar o ícone do Edit Master: {error}");
+                        let _ = append_diagnostic_log(app_handle, &message);
+                        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, message).into());
+                    }
+                };
                 let rgba = decoded_icon.to_rgba8();
                 let (width, height) = rgba.dimensions();
                 let icon = tauri::image::Image::new_owned(rgba.into_raw(), width, height);
-                window.set_icon(icon)?;
+                if let Err(error) = window.set_icon(icon) {
+                    let _ = append_diagnostic_log(app_handle, &format!("Falha ao definir o ícone da janela: {error}"));
+                    return Err(error.into());
+                }
+                let _ = append_diagnostic_log(app_handle, "Etapa: janela e ícone inicializados; aguardando a interface WebView.");
+            } else {
+                let _ = append_diagnostic_log(app_handle, "ERRO: janela principal 'main' não foi encontrada.");
             }
             Ok(())
         })
@@ -2315,7 +2401,9 @@ pub fn run() {
             extract_audio_file,
             export_timeline_mp4,
             get_app_version,
-            get_bundled_media_tools
+            get_bundled_media_tools,
+            write_runtime_diagnostic,
+            get_diagnostic_log_path
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o Edit Master");
