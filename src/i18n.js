@@ -893,24 +893,39 @@ const attributeNames = new Set([
 ]);
 
 function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\export function translateText(value, language = 'pt-BR') {
-  if (typeof value !== 'string' || language === 'pt-BR') return value;
-  const dictionary = dictionaries[language];
-  if (!dictionary) return value;
-  if (dictionary[value] !== undefined) return dictionary[value];
-
-  // Translate common dynamic feedback prefixes while preserving the actual error detail.');
+  let output = '';
+  for (const character of value) {
+    if ('\\^$.*+?()[]{}|'.includes(character)) output += '\\';
+    output += character;
+  }
+  return output;
 }
 
 function translateTemplate(value, dictionary) {
   for (const [source, target] of Object.entries(dictionary)) {
-    if (!source.includes('${')) continue;
-    const tokens = source.split(/(\\$\\{[^}]+\\})/g);
+    if (!source.includes('$' + '{')) continue;
+    const tokens = source.split(/(\$[{][^}]+[}])/g);
     const pattern = tokens.map(token =>
-      token.startsWith('${') && token.endsWith('}') ? '([\\s\\S]+?)' : escapeRegExp(token)
+      token.startsWith('$' + '{') ? '(.+?)' : escapeRegExp(token)
     ).join('');
-    const match = value.match(new RegExp('^' + pattern + '
-  const dynamicPrefixes = language === 'en'
+    const match = value.match(new RegExp('^' + pattern + '$'));
+    if (!match) continue;
+    let capture = 1;
+    return target.replace(new RegExp('\\$[{][^}]+[}]', 'g'), () => match[capture++] ?? '');
+  }
+  return undefined;
+}
+
+export function translateText(value, language = 'pt-BR') {
+  if (typeof value !== 'string' || language === 'pt-BR') return value;
+  const dictionary = dictionaries[language];
+  if (!dictionary) return value;
+  if (dictionary[value] !== undefined) return dictionary[value];
+  const templated = translateTemplate(value, dictionary);
+  if (templated !== undefined) return templated;
+
+  // Translate common dynamic feedback prefixes while preserving the actual error detail.
+const dynamicPrefixes = language === 'en'
     ? [['Não foi possível ', 'Could not '], ['Falha ao ', 'Failed to '], ['Falha na ', 'Failure during '], ['Falha no ', 'Failure in '], ['Não há ', 'There are no '], ['Nenhum ', 'No '], ['Selecione ', 'Select '], ['Escolha ', 'Choose '], ['Importe ', 'Import '], ['Adicione ', 'Add ']]
     : [['Não foi possível ', 'No se pudo '], ['Falha ao ', 'Error al '], ['Falha na ', 'Error en '], ['Falha no ', 'Error en '], ['Não há ', 'No hay '], ['Nenhum ', 'Ningún '], ['Selecione ', 'Selecciona '], ['Escolha ', 'Elige '], ['Importe ', 'Importa '], ['Adicione ', 'Añade ']];
   const extraPrefixes = language === 'en'
