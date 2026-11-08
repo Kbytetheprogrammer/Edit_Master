@@ -904,7 +904,7 @@ function App() {
     setExportBusy(true);
     setNotice('Preparando a renderização MP4…');
     try {
-      const built = createExportRequest(media, clips, executable, outputPath, { width: 1920, height: 1080, fps: 60, crf: 20 });
+      const built = createExportRequest(media, clips, executable, outputPath, { width: 1920, height: 1080, fps: 60, crf: 20 }, subtitles);
       if (!built.ok) throw new Error(built.reason);
       const result = await invoke('export_timeline_mp4', { request: built.request });
       setLastExportedPath(result.outputPath || outputPath);
