@@ -150,7 +150,7 @@ const lessons = [
   }
 ];
 
-export default function HelpCenter({ onClose }) {
+function HelpCenter({ onClose }) {
   return (
     <div className="help-body help-course">
       <div className="help-course-intro">
@@ -173,3 +173,5 @@ export default function HelpCenter({ onClose }) {
     </div>
   );
 }
+
+export default withLocalization(HelpCenter);
