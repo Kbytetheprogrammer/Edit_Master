@@ -2085,14 +2085,19 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         source_audio.push(has_audio);
     }
     let mut audio_paths = Vec::new();
+    let mut audio_source_durations = Vec::new();
     let mut audio_durations = Vec::new();
+    let mut rendered_audio_clips = Vec::new();
     for clip in &audio_clips {
         if clip.audio_muted.unwrap_or(false) { continue; }
         let path = media_map.get(clip.media_id.as_str()).ok_or_else(|| format!("A mídia de áudio '{}' não está no projeto.", clip.media_id))?.canonicalize().map_err(|error| format!("Áudio indisponível: {error}"))?;
         let source_duration = (clip.end - clip.start).max(0.0).min(clip.duration.max(0.0));
         if !path.is_file() || source_duration <= 0.05 { continue; }
         let speed = clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0);
-        audio_paths.push(path); audio_durations.push(source_duration / speed);
+        audio_paths.push(path);
+        audio_source_durations.push(source_duration);
+        audio_durations.push(source_duration / speed);
+        rendered_audio_clips.push(*clip);
     }
 
     let mut command = Command::new(&ffmpeg);
@@ -2119,8 +2124,8 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
     }
     let mut audio_track_indices = Vec::new();
     for (audio_index, path) in audio_paths.iter().enumerate() {
-        let clip = audio_clips.iter().filter(|clip| !clip.audio_muted.unwrap_or(false)).nth(audio_index).ok_or("Falha ao mapear faixa de áudio.")?;
-        command.args(["-ss", &format!("{:.4}", clip.start.max(0.0)), "-t", &format!("{:.4}", audio_durations[audio_index]), "-i"]);
+        let clip = rendered_audio_clips[audio_index];
+        command.args(["-ss", &format!("{:.4}", clip.start.max(0.0)), "-t", &format!("{:.4}", audio_source_durations[audio_index]), "-i"]);
         command.arg(path);
         audio_track_indices.push(next_input);
         next_input += 1;
@@ -2153,7 +2158,7 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
     // Audio items are placed sequentially from the beginning of the soundtrack. This first
     // renderer intentionally does not claim arbitrary drag positioning or layered transitions.
     let mut audio_cursor: f64 = 0.0;
-    for (index, clip) in audio_clips.iter().filter(|clip| !clip.audio_muted.unwrap_or(false)).enumerate() {
+    for (index, clip) in rendered_audio_clips.iter().enumerate() {
         if index >= audio_track_indices.len() { break; }
         let audio_index = audio_track_indices[index];
         let duration = audio_durations[index];
