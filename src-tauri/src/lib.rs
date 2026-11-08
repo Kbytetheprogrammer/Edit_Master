@@ -1342,7 +1342,7 @@ struct ExportTimelineRequest {
 
 fn default_export_width() -> u32 { 1920 }
 fn default_export_height() -> u32 { 1080 }
-fn default_export_fps() -> u32 { 30 }
+fn default_export_fps() -> u32 { 60 }
 fn default_export_crf() -> u32 { 20 }
 
 #[derive(Debug, Serialize)]
