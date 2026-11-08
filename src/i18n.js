@@ -572,6 +572,7 @@ Object.assign(dictionaries.es, {
   '03 / CONTROLES':'03 / CONTROLES','04 / MONTAGEM':'04 / EDICIÓN','STOCK':'RECURSOS','Motion':'Movimiento',
   'Extrair áudio de mídia':'Extraer audio del archivo multimedia','Procurar vídeos duplicados':'Buscar vídeos duplicados',
   'Selecionar arquivos':'Seleccionar archivos','Fade-out · segundos':'Fundido de salida · segundos',
+  'Volume e silêncio afetam a prévia e a exportação. Fade-in e fade-out são aplicados na exportação MP4.':'El volumen y el silencio afectan a la vista previa y a la exportación. Los fundidos de entrada y salida se aplican al MP4 exportado.',
   'Volume e silêncio afetam a prévia. Os fades ficam salvos no projeto, mas ainda aguardam o motor de renderização para serem aplicados no MP4.':'El volumen y el silencio afectan a la vista previa y a la exportación. Los fundidos de entrada y salida se aplican al MP4 exportado.',
   'Os ajustes aparecem na prévia e ficam salvos no projeto. A composição de camadas no vídeo exportado virá com o renderizador.':'Los ajustes aparecen en la vista previa y se guardan en el proyecto. La composición de capas en el vídeo exportado llegará con el motor de renderizado.',
   'Os keyframes são interpolados linearmente no tempo original da mídia. A prévia mostra a transformação animada; a exportação final ainda não está disponível.':'Los fotogramas clave se interpolan linealmente en el tiempo original del medio. La vista previa muestra la transformación animada; la exportación final aún no está disponible.',
