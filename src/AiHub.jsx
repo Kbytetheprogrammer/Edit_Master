@@ -1,3 +1,4 @@
+import { withLocalization } from './i18n.js';
 import { useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -27,7 +28,7 @@ function makeSrt(cues) {
   return cues.map((cue, index) => `${index + 1}\n${stamp(cue.start)} --> ${stamp(cue.end)}\n${String(cue.text || '').trim()}`).join('\n\n');
 }
 
-export default function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = [], onApplySrt, onClose, setNotice }) {
+function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = [], onApplySrt, onClose, setNotice }) {
   const [provider, setProvider] = useState(() => localStorage.getItem(PROVIDER_KEY) || 'local');
   const [task, setTask] = useState('generate');
   const [language, setLanguage] = useState('pt');
@@ -209,3 +210,5 @@ export default function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia,
     <div className="ai-footer-note">As APIs de nuvem exigem contas e chaves próprias, e podem ter custos. A modalidade local não exige chave, mas precisa do executável e do modelo Whisper baixados pelo usuário.</div>
   </div>;
 }
+
+export default withLocalization(AiHub);
