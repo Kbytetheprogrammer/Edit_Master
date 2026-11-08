@@ -44,7 +44,7 @@ export function createExportRequest(media = [], clips = [], ffmpegPath, outputPa
     const duration = Number(clip.duration) || 0;
     const start = Number(clip.start) || 0;
     const end = Number(clip.end) || 0;
-    if (!Number.isFinite(duration) || !Number.isFinite(start) || !Number.isFinite(end) || duration <= 0 || end - start <= 0.05) {
+    if (!Number.isFinite(duration) || !Number.isFinite(start) || !Number.isFinite(end) || duration <= 0 || start < 0 || end > duration + 0.05 || end - start <= 0.05) {
       return { ok: false, reason: `O segmento “${clip.name || 'sem nome'}” tem duração inválida.` };
     }
   }
