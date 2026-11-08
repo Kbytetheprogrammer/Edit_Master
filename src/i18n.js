@@ -1191,6 +1191,20 @@ Object.assign(dictionaries.en, {
 Object.assign(dictionaries.es, {
   'Pasta analisada:':'Carpeta analizada:','Por':'Por',' e ':' y ','Espaço':'Espacio'
 });
+
+Object.assign(dictionaries.en, {
+  "\${added.length} arquivo(s) importado(s). Use o botão Importar arquivos para garantir que o projeto consiga copiar a mídia original.":"\${added.length} file(s) imported. Use Import files to ensure the project can copy the original media.",
+  "\${found.length} resultado(s) encontrados. Confira a licença e a autoria antes de usar.":"\${found.length} result(s) found. Check the license and creator before use.",
+  "Media Hub: mídia adicionada por \${item.provider}. A origem e a licença foram preservadas no projeto.":"Media Hub: media added by \${item.provider}. The source and license were preserved in the project.",
+  "Vídeo enviado com sucesso. Privacidade: \${result.privacyStatus || privacy}.":"Video uploaded successfully. Privacy: \${result.privacyStatus || privacy}."
+});
+Object.assign(dictionaries.es, {
+  "\${added.length} arquivo(s) importado(s). Use o botão Importar arquivos para garantir que o projeto consiga copiar a mídia original.":"Se importaron \${added.length} archivo(s). Usa Importar archivos para asegurar que el proyecto pueda copiar el medio original.",
+  "\${found.length} resultado(s) encontrados. Confira a licença e a autoria antes de usar.":"Se encontraron \${found.length} resultado(s). Comprueba la licencia y la autoría antes de usarlo.",
+  "Media Hub: mídia adicionada por \${item.provider}. A origem e a licença foram preservadas no projeto.":"Media Hub: medio añadido por \${item.provider}. Se conservaron el origen y la licencia en el proyecto.",
+  "Vídeo enviado com sucesso. Privacidade: \${result.privacyStatus || privacy}.":"Vídeo enviado correctamente. Privacidad: \${result.privacyStatus || privacy}."
+});
+
 const attributeNames = new Set([
   'placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'label',
   'description', 'helperText', 'emptyLabel'
@@ -1205,14 +1219,24 @@ function escapeRegExp(value) {
   return output;
 }
 
-function translateTemplate(value, dictionary) {
-  for (const [source, target] of Object.entries(dictionary)) {
-    if (!source.includes('{')) continue;
-    const tokens = source.split(/(\{[^}]*\})/g);
-    const pattern = tokens.map(token =>
-      token.startsWith('{') && token.endsWith('}') ? '(.+?)' : escapeRegExp(token)
-    ).join('');
-    const match = value.match(new RegExp('^' + pattern + '$'));
+const compiledTemplates = Object.fromEntries(
+  Object.entries(dictionaries).map(([language, dictionary]) => [
+    language,
+    Object.entries(dictionary)
+      .filter(([source]) => source.includes('{'))
+      .map(([source, target]) => {
+        const tokens = source.split(/(\{[^}]*\})/g);
+        const pattern = tokens.map(token =>
+          token.startsWith('{') && token.endsWith('}') ? '(.+?)' : escapeRegExp(token)
+        ).join('');
+        return { regex: new RegExp('^' + pattern + '$'), target };
+      })
+  ])
+);
+
+function translateTemplate(value, language) {
+  for (const { regex, target } of compiledTemplates[language] || []) {
+    const match = value.match(regex);
     if (!match) continue;
     let capture = 1;
     return target.replace(/\{[^}]*\}/g, () => match[capture++] ?? '');
@@ -1225,7 +1249,7 @@ export function translateText(value, language = 'pt-BR') {
   const dictionary = dictionaries[language];
   if (!dictionary) return value;
   if (dictionary[value] !== undefined) return dictionary[value];
-  const templated = translateTemplate(value, dictionary);
+  const templated = translateTemplate(value, language);
   if (templated !== undefined) return templated;
 
   // Translate common dynamic feedback prefixes while preserving the actual error detail.
@@ -1260,304 +1284,17 @@ function translateNode(node, language) {
 }
 
 export function LocalizedTree({ language = 'pt-BR', children }) {
-  return <>{translateNode(children, language)}</>;
+  return React.createElement(React.Fragment, null, translateNode(children, language));
 }
 
 export function withLocalization(Component) {
   function LocalizedComponent({ language = 'pt-BR', ...props }) {
-    return <LocalizedTree language={language}><Component {...props} uiLanguage={language} /></LocalizedTree>;
+    return React.createElement(
+      LocalizedTree,
+      { language },
+      React.createElement(Component, { ...props, uiLanguage: language })
+    );
   }
-  LocalizedComponent.displayName = `Localized(${Component.displayName || Component.name || 'Component'})`;
-  return LocalizedComponent;
-}
-));
-    if (!match) continue;
-    let capture = 1;
-    return target.replace(/\\$\\{[^}]+\\}/g, () => match[capture++] ?? '');
-  }
-  return undefined;
-}
-
-export function translateText(value, language = 'pt-BR') {
-  if (typeof value !== 'string' || language === 'pt-BR') return value;
-  const dictionary = dictionaries[language];
-  if (!dictionary) return value;
-  if (dictionary[value] !== undefined) return dictionary[value];
-  const templated = translateTemplate(value, dictionary);
-  if (templated !== undefined) return templated;
-
-  // Translate common dynamic feedback prefixes while preserving the actual error detail.
-  const dynamicPrefixes = language === 'en'
-    ? [['Não foi possível ', 'Could not '], ['Falha ao ', 'Failed to '], ['Falha na ', 'Failure during '], ['Falha no ', 'Failure in '], ['Não há ', 'There are no '], ['Nenhum ', 'No '], ['Selecione ', 'Select '], ['Escolha ', 'Choose '], ['Importe ', 'Import '], ['Adicione ', 'Add ']]
-    : [['Não foi possível ', 'No se pudo '], ['Falha ao ', 'Error al '], ['Falha na ', 'Error en '], ['Falha no ', 'Error en '], ['Não há ', 'No hay '], ['Nenhum ', 'Ningún '], ['Selecione ', 'Selecciona '], ['Escolha ', 'Elige '], ['Importe ', 'Importa '], ['Adicione ', 'Añade ']];
-  const extraPrefixes = language === 'en'
-    ? [['Não foi possível acessar ', 'Could not access '], ['Não foi possível ler ', 'Could not read '], ['Não foi possível criar ', 'Could not create '], ['Não foi possível salvar ', 'Could not save '], ['Não foi possível remover ', 'Could not remove '], ['Não foi possível iniciar ', 'Could not start '], ['Não foi possível executar ', 'Could not run '], ['O Windows não conseguiu ', 'Windows could not '], ['O arquivo de mídia ', 'The media file '], ['O arquivo selecionado ', 'The selected file '], ['O arquivo de saída ', 'The output file '], ['O FFmpeg não conseguiu ', 'FFmpeg could not '], ['A exportação MP4 falhou: ', 'MP4 export failed: '], ['A extração de áudio falhou: ', 'Audio extraction failed: '], ['Falha ao buscar ', 'Failed to search '], ['Falha ao enviar ', 'Failed to upload '], ['A chave de API ', 'The API key '], ['Selecione um ', 'Select a '], ['Escolha uma ', 'Choose a ']]
-    : [['Não foi possível acessar ', 'No se pudo acceder a '], ['Não foi possível ler ', 'No se pudo leer '], ['Não foi possível criar ', 'No se pudo crear '], ['Não foi possível salvar ', 'No se pudo guardar '], ['Não foi possível remover ', 'No se pudo eliminar '], ['Não foi possível iniciar ', 'No se pudo iniciar '], ['Não foi possível executar ', 'No se pudo ejecutar '], ['O Windows não conseguiu ', 'Windows no pudo '], ['O arquivo de mídia ', 'El archivo multimedia '], ['O arquivo selecionado ', 'El archivo seleccionado '], ['O arquivo de saída ', 'El archivo de salida '], ['O FFmpeg não conseguiu ', 'FFmpeg no pudo '], ['A exportação MP4 falhou: ', 'Falló la exportación MP4: '], ['A extração de áudio falhou: ', 'Falló la extracción de audio: '], ['Falha ao buscar ', 'Error al buscar '], ['Falha ao enviar ', 'Error al enviar '], ['A chave de API ', 'La clave API '], ['Selecione um ', 'Selecciona un '], ['Escolha uma ', 'Elige una ']];
-  for (const [source, target] of [...dynamicPrefixes, ...extraPrefixes]) {
-    if (value.startsWith(source)) return target + value.slice(source.length);
-  }
-  return value;
-}
-
-function translateNode(node, language) {
-  if (node == null || typeof node === 'boolean' || typeof node === 'number') return node;
-  if (typeof node === 'string') return translateText(node, language);
-  if (Array.isArray(node)) return node.map(child => translateNode(child, language));
-  if (!React.isValidElement(node)) return node;
-
-  const props = {};
-  for (const [key, value] of Object.entries(node.props)) {
-    if (key === 'children') {
-      props.children = translateNode(value, language);
-    } else if (attributeNames.has(key) && typeof value === 'string') {
-      props[key] = translateText(value, language);
-    }
-  }
-  return React.cloneElement(node, props);
-}
-
-export function LocalizedTree({ language = 'pt-BR', children }) {
-  return <>{translateNode(children, language)}</>;
-}
-
-export function withLocalization(Component) {
-  function LocalizedComponent({ language = 'pt-BR', ...props }) {
-    return <LocalizedTree language={language}><Component {...props} uiLanguage={language} /></LocalizedTree>;
-  }
-  LocalizedComponent.displayName = `Localized(${Component.displayName || Component.name || 'Component'})`;
-  return LocalizedComponent;
-}
- + '{') && !source.includes('{')) continue;
-    const tokens = source.split(/(\$[{][^}]+[}]|[{][^}]*[}])/g);
-    const pattern = tokens.map(token =>
-      token.startsWith('
-    const match = value.match(new RegExp('^' + pattern + '$'));
-    if (!match) continue;
-    let capture = 1;
-    return target.replace(new RegExp('\\$[{][^}]+[}]', 'g'), () => match[capture++] ?? '');
-  }
-  return undefined;
-}
-
-export function translateText(value, language = 'pt-BR') {
-  if (typeof value !== 'string' || language === 'pt-BR') return value;
-  const dictionary = dictionaries[language];
-  if (!dictionary) return value;
-  if (dictionary[value] !== undefined) return dictionary[value];
-  const templated = translateTemplate(value, dictionary);
-  if (templated !== undefined) return templated;
-
-  // Translate common dynamic feedback prefixes while preserving the actual error detail.
-const dynamicPrefixes = language === 'en'
-    ? [['Não foi possível ', 'Could not '], ['Falha ao ', 'Failed to '], ['Falha na ', 'Failure during '], ['Falha no ', 'Failure in '], ['Não há ', 'There are no '], ['Nenhum ', 'No '], ['Selecione ', 'Select '], ['Escolha ', 'Choose '], ['Importe ', 'Import '], ['Adicione ', 'Add ']]
-    : [['Não foi possível ', 'No se pudo '], ['Falha ao ', 'Error al '], ['Falha na ', 'Error en '], ['Falha no ', 'Error en '], ['Não há ', 'No hay '], ['Nenhum ', 'Ningún '], ['Selecione ', 'Selecciona '], ['Escolha ', 'Elige '], ['Importe ', 'Importa '], ['Adicione ', 'Añade ']];
-  const extraPrefixes = language === 'en'
-    ? [['Não foi possível acessar ', 'Could not access '], ['Não foi possível ler ', 'Could not read '], ['Não foi possível criar ', 'Could not create '], ['Não foi possível salvar ', 'Could not save '], ['Não foi possível remover ', 'Could not remove '], ['Não foi possível iniciar ', 'Could not start '], ['Não foi possível executar ', 'Could not run '], ['O Windows não conseguiu ', 'Windows could not '], ['O arquivo de mídia ', 'The media file '], ['O arquivo selecionado ', 'The selected file '], ['O arquivo de saída ', 'The output file '], ['O FFmpeg não conseguiu ', 'FFmpeg could not '], ['A exportação MP4 falhou: ', 'MP4 export failed: '], ['A extração de áudio falhou: ', 'Audio extraction failed: '], ['Falha ao buscar ', 'Failed to search '], ['Falha ao enviar ', 'Failed to upload '], ['A chave de API ', 'The API key '], ['Selecione um ', 'Select a '], ['Escolha uma ', 'Choose a ']]
-    : [['Não foi possível acessar ', 'No se pudo acceder a '], ['Não foi possível ler ', 'No se pudo leer '], ['Não foi possível criar ', 'No se pudo crear '], ['Não foi possível salvar ', 'No se pudo guardar '], ['Não foi possível remover ', 'No se pudo eliminar '], ['Não foi possível iniciar ', 'No se pudo iniciar '], ['Não foi possível executar ', 'No se pudo ejecutar '], ['O Windows não conseguiu ', 'Windows no pudo '], ['O arquivo de mídia ', 'El archivo multimedia '], ['O arquivo selecionado ', 'El archivo seleccionado '], ['O arquivo de saída ', 'El archivo de salida '], ['O FFmpeg não conseguiu ', 'FFmpeg no pudo '], ['A exportação MP4 falhou: ', 'Falló la exportación MP4: '], ['A extração de áudio falhou: ', 'Falló la extracción de audio: '], ['Falha ao buscar ', 'Error al buscar '], ['Falha ao enviar ', 'Error al enviar '], ['A chave de API ', 'La clave API '], ['Selecione um ', 'Selecciona un '], ['Escolha uma ', 'Elige una ']];
-  for (const [source, target] of [...dynamicPrefixes, ...extraPrefixes]) {
-    if (value.startsWith(source)) return target + value.slice(source.length);
-  }
-  return value;
-}
-
-function translateNode(node, language) {
-  if (node == null || typeof node === 'boolean' || typeof node === 'number') return node;
-  if (typeof node === 'string') return translateText(node, language);
-  if (Array.isArray(node)) return node.map(child => translateNode(child, language));
-  if (!React.isValidElement(node)) return node;
-
-  const props = {};
-  for (const [key, value] of Object.entries(node.props)) {
-    if (key === 'children') {
-      props.children = translateNode(value, language);
-    } else if (attributeNames.has(key) && typeof value === 'string') {
-      props[key] = translateText(value, language);
-    }
-  }
-  return React.cloneElement(node, props);
-}
-
-export function LocalizedTree({ language = 'pt-BR', children }) {
-  return <>{translateNode(children, language)}</>;
-}
-
-export function withLocalization(Component) {
-  function LocalizedComponent({ language = 'pt-BR', ...props }) {
-    return <LocalizedTree language={language}><Component {...props} uiLanguage={language} /></LocalizedTree>;
-  }
-  LocalizedComponent.displayName = `Localized(${Component.displayName || Component.name || 'Component'})`;
-  return LocalizedComponent;
-}
-));
-    if (!match) continue;
-    let capture = 1;
-    return target.replace(/\\$\\{[^}]+\\}/g, () => match[capture++] ?? '');
-  }
-  return undefined;
-}
-
-export function translateText(value, language = 'pt-BR') {
-  if (typeof value !== 'string' || language === 'pt-BR') return value;
-  const dictionary = dictionaries[language];
-  if (!dictionary) return value;
-  if (dictionary[value] !== undefined) return dictionary[value];
-  const templated = translateTemplate(value, dictionary);
-  if (templated !== undefined) return templated;
-
-  // Translate common dynamic feedback prefixes while preserving the actual error detail.
-  const dynamicPrefixes = language === 'en'
-    ? [['Não foi possível ', 'Could not '], ['Falha ao ', 'Failed to '], ['Falha na ', 'Failure during '], ['Falha no ', 'Failure in '], ['Não há ', 'There are no '], ['Nenhum ', 'No '], ['Selecione ', 'Select '], ['Escolha ', 'Choose '], ['Importe ', 'Import '], ['Adicione ', 'Add ']]
-    : [['Não foi possível ', 'No se pudo '], ['Falha ao ', 'Error al '], ['Falha na ', 'Error en '], ['Falha no ', 'Error en '], ['Não há ', 'No hay '], ['Nenhum ', 'Ningún '], ['Selecione ', 'Selecciona '], ['Escolha ', 'Elige '], ['Importe ', 'Importa '], ['Adicione ', 'Añade ']];
-  const extraPrefixes = language === 'en'
-    ? [['Não foi possível acessar ', 'Could not access '], ['Não foi possível ler ', 'Could not read '], ['Não foi possível criar ', 'Could not create '], ['Não foi possível salvar ', 'Could not save '], ['Não foi possível remover ', 'Could not remove '], ['Não foi possível iniciar ', 'Could not start '], ['Não foi possível executar ', 'Could not run '], ['O Windows não conseguiu ', 'Windows could not '], ['O arquivo de mídia ', 'The media file '], ['O arquivo selecionado ', 'The selected file '], ['O arquivo de saída ', 'The output file '], ['O FFmpeg não conseguiu ', 'FFmpeg could not '], ['A exportação MP4 falhou: ', 'MP4 export failed: '], ['A extração de áudio falhou: ', 'Audio extraction failed: '], ['Falha ao buscar ', 'Failed to search '], ['Falha ao enviar ', 'Failed to upload '], ['A chave de API ', 'The API key '], ['Selecione um ', 'Select a '], ['Escolha uma ', 'Choose a ']]
-    : [['Não foi possível acessar ', 'No se pudo acceder a '], ['Não foi possível ler ', 'No se pudo leer '], ['Não foi possível criar ', 'No se pudo crear '], ['Não foi possível salvar ', 'No se pudo guardar '], ['Não foi possível remover ', 'No se pudo eliminar '], ['Não foi possível iniciar ', 'No se pudo iniciar '], ['Não foi possível executar ', 'No se pudo ejecutar '], ['O Windows não conseguiu ', 'Windows no pudo '], ['O arquivo de mídia ', 'El archivo multimedia '], ['O arquivo selecionado ', 'El archivo seleccionado '], ['O arquivo de saída ', 'El archivo de salida '], ['O FFmpeg não conseguiu ', 'FFmpeg no pudo '], ['A exportação MP4 falhou: ', 'Falló la exportación MP4: '], ['A extração de áudio falhou: ', 'Falló la extracción de audio: '], ['Falha ao buscar ', 'Error al buscar '], ['Falha ao enviar ', 'Error al enviar '], ['A chave de API ', 'La clave API '], ['Selecione um ', 'Selecciona un '], ['Escolha uma ', 'Elige una ']];
-  for (const [source, target] of [...dynamicPrefixes, ...extraPrefixes]) {
-    if (value.startsWith(source)) return target + value.slice(source.length);
-  }
-  return value;
-}
-
-function translateNode(node, language) {
-  if (node == null || typeof node === 'boolean' || typeof node === 'number') return node;
-  if (typeof node === 'string') return translateText(node, language);
-  if (Array.isArray(node)) return node.map(child => translateNode(child, language));
-  if (!React.isValidElement(node)) return node;
-
-  const props = {};
-  for (const [key, value] of Object.entries(node.props)) {
-    if (key === 'children') {
-      props.children = translateNode(value, language);
-    } else if (attributeNames.has(key) && typeof value === 'string') {
-      props[key] = translateText(value, language);
-    }
-  }
-  return React.cloneElement(node, props);
-}
-
-export function LocalizedTree({ language = 'pt-BR', children }) {
-  return <>{translateNode(children, language)}</>;
-}
-
-export function withLocalization(Component) {
-  function LocalizedComponent({ language = 'pt-BR', ...props }) {
-    return <LocalizedTree language={language}><Component {...props} uiLanguage={language} /></LocalizedTree>;
-  }
-  LocalizedComponent.displayName = `Localized(${Component.displayName || Component.name || 'Component'})`;
-  return LocalizedComponent;
-}
- + '{') || token.startsWith('{') ? '(.+?)' : escapeRegExp(token)
-    ).join('');
-    const match = value.match(new RegExp('^' + pattern + '$'));
-    if (!match) continue;
-    let capture = 1;
-    return target.replace(new RegExp('\\$[{][^}]+[}]', 'g'), () => match[capture++] ?? '');
-  }
-  return undefined;
-}
-
-export function translateText(value, language = 'pt-BR') {
-  if (typeof value !== 'string' || language === 'pt-BR') return value;
-  const dictionary = dictionaries[language];
-  if (!dictionary) return value;
-  if (dictionary[value] !== undefined) return dictionary[value];
-  const templated = translateTemplate(value, dictionary);
-  if (templated !== undefined) return templated;
-
-  // Translate common dynamic feedback prefixes while preserving the actual error detail.
-const dynamicPrefixes = language === 'en'
-    ? [['Não foi possível ', 'Could not '], ['Falha ao ', 'Failed to '], ['Falha na ', 'Failure during '], ['Falha no ', 'Failure in '], ['Não há ', 'There are no '], ['Nenhum ', 'No '], ['Selecione ', 'Select '], ['Escolha ', 'Choose '], ['Importe ', 'Import '], ['Adicione ', 'Add ']]
-    : [['Não foi possível ', 'No se pudo '], ['Falha ao ', 'Error al '], ['Falha na ', 'Error en '], ['Falha no ', 'Error en '], ['Não há ', 'No hay '], ['Nenhum ', 'Ningún '], ['Selecione ', 'Selecciona '], ['Escolha ', 'Elige '], ['Importe ', 'Importa '], ['Adicione ', 'Añade ']];
-  const extraPrefixes = language === 'en'
-    ? [['Não foi possível acessar ', 'Could not access '], ['Não foi possível ler ', 'Could not read '], ['Não foi possível criar ', 'Could not create '], ['Não foi possível salvar ', 'Could not save '], ['Não foi possível remover ', 'Could not remove '], ['Não foi possível iniciar ', 'Could not start '], ['Não foi possível executar ', 'Could not run '], ['O Windows não conseguiu ', 'Windows could not '], ['O arquivo de mídia ', 'The media file '], ['O arquivo selecionado ', 'The selected file '], ['O arquivo de saída ', 'The output file '], ['O FFmpeg não conseguiu ', 'FFmpeg could not '], ['A exportação MP4 falhou: ', 'MP4 export failed: '], ['A extração de áudio falhou: ', 'Audio extraction failed: '], ['Falha ao buscar ', 'Failed to search '], ['Falha ao enviar ', 'Failed to upload '], ['A chave de API ', 'The API key '], ['Selecione um ', 'Select a '], ['Escolha uma ', 'Choose a ']]
-    : [['Não foi possível acessar ', 'No se pudo acceder a '], ['Não foi possível ler ', 'No se pudo leer '], ['Não foi possível criar ', 'No se pudo crear '], ['Não foi possível salvar ', 'No se pudo guardar '], ['Não foi possível remover ', 'No se pudo eliminar '], ['Não foi possível iniciar ', 'No se pudo iniciar '], ['Não foi possível executar ', 'No se pudo ejecutar '], ['O Windows não conseguiu ', 'Windows no pudo '], ['O arquivo de mídia ', 'El archivo multimedia '], ['O arquivo selecionado ', 'El archivo seleccionado '], ['O arquivo de saída ', 'El archivo de salida '], ['O FFmpeg não conseguiu ', 'FFmpeg no pudo '], ['A exportação MP4 falhou: ', 'Falló la exportación MP4: '], ['A extração de áudio falhou: ', 'Falló la extracción de audio: '], ['Falha ao buscar ', 'Error al buscar '], ['Falha ao enviar ', 'Error al enviar '], ['A chave de API ', 'La clave API '], ['Selecione um ', 'Selecciona un '], ['Escolha uma ', 'Elige una ']];
-  for (const [source, target] of [...dynamicPrefixes, ...extraPrefixes]) {
-    if (value.startsWith(source)) return target + value.slice(source.length);
-  }
-  return value;
-}
-
-function translateNode(node, language) {
-  if (node == null || typeof node === 'boolean' || typeof node === 'number') return node;
-  if (typeof node === 'string') return translateText(node, language);
-  if (Array.isArray(node)) return node.map(child => translateNode(child, language));
-  if (!React.isValidElement(node)) return node;
-
-  const props = {};
-  for (const [key, value] of Object.entries(node.props)) {
-    if (key === 'children') {
-      props.children = translateNode(value, language);
-    } else if (attributeNames.has(key) && typeof value === 'string') {
-      props[key] = translateText(value, language);
-    }
-  }
-  return React.cloneElement(node, props);
-}
-
-export function LocalizedTree({ language = 'pt-BR', children }) {
-  return <>{translateNode(children, language)}</>;
-}
-
-export function withLocalization(Component) {
-  function LocalizedComponent({ language = 'pt-BR', ...props }) {
-    return <LocalizedTree language={language}><Component {...props} uiLanguage={language} /></LocalizedTree>;
-  }
-  LocalizedComponent.displayName = `Localized(${Component.displayName || Component.name || 'Component'})`;
-  return LocalizedComponent;
-}
-));
-    if (!match) continue;
-    let capture = 1;
-    return target.replace(/\\$\\{[^}]+\\}/g, () => match[capture++] ?? '');
-  }
-  return undefined;
-}
-
-export function translateText(value, language = 'pt-BR') {
-  if (typeof value !== 'string' || language === 'pt-BR') return value;
-  const dictionary = dictionaries[language];
-  if (!dictionary) return value;
-  if (dictionary[value] !== undefined) return dictionary[value];
-  const templated = translateTemplate(value, dictionary);
-  if (templated !== undefined) return templated;
-
-  // Translate common dynamic feedback prefixes while preserving the actual error detail.
-  const dynamicPrefixes = language === 'en'
-    ? [['Não foi possível ', 'Could not '], ['Falha ao ', 'Failed to '], ['Falha na ', 'Failure during '], ['Falha no ', 'Failure in '], ['Não há ', 'There are no '], ['Nenhum ', 'No '], ['Selecione ', 'Select '], ['Escolha ', 'Choose '], ['Importe ', 'Import '], ['Adicione ', 'Add ']]
-    : [['Não foi possível ', 'No se pudo '], ['Falha ao ', 'Error al '], ['Falha na ', 'Error en '], ['Falha no ', 'Error en '], ['Não há ', 'No hay '], ['Nenhum ', 'Ningún '], ['Selecione ', 'Selecciona '], ['Escolha ', 'Elige '], ['Importe ', 'Importa '], ['Adicione ', 'Añade ']];
-  const extraPrefixes = language === 'en'
-    ? [['Não foi possível acessar ', 'Could not access '], ['Não foi possível ler ', 'Could not read '], ['Não foi possível criar ', 'Could not create '], ['Não foi possível salvar ', 'Could not save '], ['Não foi possível remover ', 'Could not remove '], ['Não foi possível iniciar ', 'Could not start '], ['Não foi possível executar ', 'Could not run '], ['O Windows não conseguiu ', 'Windows could not '], ['O arquivo de mídia ', 'The media file '], ['O arquivo selecionado ', 'The selected file '], ['O arquivo de saída ', 'The output file '], ['O FFmpeg não conseguiu ', 'FFmpeg could not '], ['A exportação MP4 falhou: ', 'MP4 export failed: '], ['A extração de áudio falhou: ', 'Audio extraction failed: '], ['Falha ao buscar ', 'Failed to search '], ['Falha ao enviar ', 'Failed to upload '], ['A chave de API ', 'The API key '], ['Selecione um ', 'Select a '], ['Escolha uma ', 'Choose a ']]
-    : [['Não foi possível acessar ', 'No se pudo acceder a '], ['Não foi possível ler ', 'No se pudo leer '], ['Não foi possível criar ', 'No se pudo crear '], ['Não foi possível salvar ', 'No se pudo guardar '], ['Não foi possível remover ', 'No se pudo eliminar '], ['Não foi possível iniciar ', 'No se pudo iniciar '], ['Não foi possível executar ', 'No se pudo ejecutar '], ['O Windows não conseguiu ', 'Windows no pudo '], ['O arquivo de mídia ', 'El archivo multimedia '], ['O arquivo selecionado ', 'El archivo seleccionado '], ['O arquivo de saída ', 'El archivo de salida '], ['O FFmpeg não conseguiu ', 'FFmpeg no pudo '], ['A exportação MP4 falhou: ', 'Falló la exportación MP4: '], ['A extração de áudio falhou: ', 'Falló la extracción de audio: '], ['Falha ao buscar ', 'Error al buscar '], ['Falha ao enviar ', 'Error al enviar '], ['A chave de API ', 'La clave API '], ['Selecione um ', 'Selecciona un '], ['Escolha uma ', 'Elige una ']];
-  for (const [source, target] of [...dynamicPrefixes, ...extraPrefixes]) {
-    if (value.startsWith(source)) return target + value.slice(source.length);
-  }
-  return value;
-}
-
-function translateNode(node, language) {
-  if (node == null || typeof node === 'boolean' || typeof node === 'number') return node;
-  if (typeof node === 'string') return translateText(node, language);
-  if (Array.isArray(node)) return node.map(child => translateNode(child, language));
-  if (!React.isValidElement(node)) return node;
-
-  const props = {};
-  for (const [key, value] of Object.entries(node.props)) {
-    if (key === 'children') {
-      props.children = translateNode(value, language);
-    } else if (attributeNames.has(key) && typeof value === 'string') {
-      props[key] = translateText(value, language);
-    }
-  }
-  return React.cloneElement(node, props);
-}
-
-export function LocalizedTree({ language = 'pt-BR', children }) {
-  return <>{translateNode(children, language)}</>;
-}
-
-export function withLocalization(Component) {
-  function LocalizedComponent({ language = 'pt-BR', ...props }) {
-    return <LocalizedTree language={language}><Component {...props} uiLanguage={language} /></LocalizedTree>;
-  }
-  LocalizedComponent.displayName = `Localized(${Component.displayName || Component.name || 'Component'})`;
+  LocalizedComponent.displayName = \`Localized(\${Component.displayName || Component.name || 'Component'})\`;
   return LocalizedComponent;
 }
