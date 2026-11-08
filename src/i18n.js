@@ -1133,6 +1133,14 @@ Object.assign(dictionaries.es, {
   "Falha ao carregar o ícone do Edit Master: {error}":"No se pudo cargar el icono de Edit Master: {error}"
 });
 
+Object.assign(dictionaries.en, {
+  'A renderização atual concatena os segmentos visuais em sequência e mistura áudio de forma básica. Ela ainda não reproduz integralmente todas as camadas, transições e títulos da prévia.':'Current rendering concatenates visual segments in sequence and mixes audio in a basic way. It does not yet fully reproduce all preview layers, transitions, and titles.',
+  'O desinstalador foi iniciado. O Edit Master será fechado.':'The uninstaller has started. Edit Master will now close.'
+});
+Object.assign(dictionaries.es, {
+  'A renderização atual concatena os segmentos visuais em sequência e mistura áudio de forma básica. Ela ainda não reproduz integralmente todas as camadas, transições e títulos da prévia.':'El renderizado actual concatena los segmentos visuales en secuencia y mezcla el audio de forma básica. Todavía no reproduce por completo todas las capas, transiciones y títulos de la vista previa.',
+  'O desinstalador foi iniciado. O Edit Master será fechado.':'El desinstalador se ha iniciado. Edit Master se cerrará ahora.'
+});
 const attributeNames = new Set([
   'placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'label',
   'description', 'helperText', 'emptyLabel'
