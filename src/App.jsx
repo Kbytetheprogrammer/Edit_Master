@@ -722,6 +722,55 @@ function App() {
     }
   };
 
+  const extractAudio = async () => {
+    if (exportBusy) return;
+    let sourcePath;
+    try {
+      sourcePath = await open({
+        multiple: false,
+        directory: false,
+        title: 'Selecionar vídeo ou arquivo de áudio',
+        filters: [{ name: 'Mídia compatível', extensions: ['mp4','mov','mkv','webm','avi','m4v','mp3','wav','m4a','aac','flac','ogg'] }],
+      });
+    } catch (error) {
+      setNotice(`Não foi possível selecionar a mídia: ${String(error)}`);
+      return;
+    }
+    if (!sourcePath || Array.isArray(sourcePath)) return;
+    let executable = ffmpegPath;
+    if (!executable) executable = await chooseFfmpeg();
+    if (!executable) return;
+    const format = (prompt('Formato de áudio: mp3, wav, flac, aac ou ogg', 'mp3') || '').trim().toLowerCase();
+    if (!['mp3','wav','flac','aac','ogg'].includes(format)) {
+      setNotice('Formato inválido. Escolha MP3, WAV, FLAC, AAC ou OGG.');
+      return;
+    }
+    const baseName = sourcePath.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '') || 'audio-extraido';
+    let outputPath;
+    try {
+      outputPath = await saveDialog({
+        title: 'Salvar áudio extraído',
+        defaultPath: `${baseName}.${format}`,
+        filters: [{ name: `Áudio ${format.toUpperCase()}`, extensions: [format] }],
+      });
+    } catch (error) {
+      setNotice(`Não foi possível escolher o destino: ${String(error)}`);
+      return;
+    }
+    if (!outputPath) return;
+    if (!outputPath.toLowerCase().endsWith(`.${format}`)) outputPath += `.${format}`;
+    setExportBusy(true);
+    setNotice('Extraindo áudio…');
+    try {
+      const result = await invoke('extract_audio_file', { request: { ffmpegPath: executable, inputPath: sourcePath, outputPath, format } });
+      setNotice(`Áudio extraído com sucesso: ${result.outputPath}`);
+    } catch (error) {
+      setNotice(`A extração de áudio falhou: ${String(error)}`);
+    } finally {
+      setExportBusy(false);
+    }
+  };
+
   const exportTimeline = async () => {
     if (exportBusy) return;
     const visualClips = clips.filter(clip => clip.type === 'video' || clip.type === 'image');
@@ -998,6 +1047,7 @@ function App() {
         <div className="panel-heading"><div><span className="eyebrow">01 / ASSETS</span><h2>Biblioteca de mídia</h2></div></div>
         <button className="import-button" onClick={chooseMediaFiles}><Import size={16}/> Importar arquivos <span>Ctrl + I</span></button>
         <button className="stock-hub-launch" onClick={openStockHub}><Images size={14}/> Media Hub <span>STOCK</span></button>
+        <button className="duplicate-scan-button" onClick={extractAudio} disabled={exportBusy}><AudioLines size={13}/> Extrair áudio de mídia</button>
         <button className="duplicate-scan-button" onClick={chooseDuplicateFolder}><Search size={13}/> Procurar vídeos duplicados</button>
         <div className="search-box"><Search size={14}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar mídia..."/><SlidersHorizontal size={14}/></div>
         <div className="media-tabs">{[['all','Tudo'],['video','Vídeos'],['image','Imagens'],['audio','Áudios']].map(([id,label])=><button key={id} className={filter===id?'active-tab':''} onClick={()=>setFilter(id)}>{label}</button>)}</div>
@@ -1113,7 +1163,7 @@ function App() {
     <footer className="statusbar"><span><i className="status-dot"/> {notice}</span><span>EDIT MASTER {runtimeVersion} · WINDOWS</span></footer>
     </>}
 
-    {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget){if(modal==='local-update-found')dismissDetectedLocalUpdate();else if(modal==='confirm-duplicate-delete')setModal('duplicates');else setModal('');}}}><section className="modal-card"><div className="modal-head"><div><span className="eyebrow">{modal==='ai-hub'?'INTELIGÊNCIA ARTIFICIAL':modal==='stock-hub'?'BIBLIOTECA DE MÍDIA':modal==='youtube-publish'?'PUBLICAÇÃO':modal==='export'?'RENDERIZAÇÃO MP4':modal==='export-complete'?'EXPORTAÇÃO CONCLUÍDA':modal==='settings'?'PREFERÊNCIAS':(modal==='duplicates'||modal==='confirm-duplicate-delete')?'LIMPEZA DE MÍDIA':modal==='confirm-uninstall'?'CONFIRMAÇÃO':(modal==='confirm-local-update'||modal==='local-update-found')?'ATUALIZAÇÃO LOCAL':'CENTRAL DE AJUDA'}</span><h2>{modal==='ai-hub'?'Edit Master AI Hub':modal==='stock-hub'?'Media Hub':modal==='youtube-publish'?'Publicar no YouTube':modal==='export'?'Exportar vídeo MP4':modal==='export-complete'?'Seu vídeo está pronto':modal==='settings'?'Configurações do aplicativo':modal==='duplicates'?'Vídeos duplicados':modal==='confirm-duplicate-delete'?'Confirmar envio à Lixeira':modal==='confirm-uninstall'?'Confirmar desinstalação':modal==='confirm-local-update'?'Confirmar atualização':modal==='local-update-found'?'Atualização local encontrada':'Primeiros passos'}</h2></div><button className="icon-button" onClick={()=>modal==='local-update-found'?dismissDetectedLocalUpdate():modal==='confirm-duplicate-delete'?setModal('duplicates'):setModal('')}><X size={18}/></button></div>{modal==='ai-hub'?<AiHub mediaItems={media} selectedMediaId={selectedMedia} onSelectMedia={setSelectedMedia} subtitles={subtitles} onApplySrt={applyAiSubtitles} onClose={()=>setModal('')} setNotice={setNotice}/>:modal==='stock-hub'?<StockHub onMediaAdded={addDownloadedStockMedia} onClose={()=>setModal('')} setNotice={setNotice}/>:modal==='youtube-publish'?<YouTubePublish initialVideoPath={lastExportedPath} onClose={()=>setModal('')} setNotice={setNotice}/>:modal==='export'?<div className="export-modal-body"><div className="export-modal-intro"><b>Renderizar a montagem para MP4</b><p>Esta versão renderiza os segmentos visuais em sequência e mistura o áudio de forma básica. Efeitos de sobreposição, transições e títulos ainda não são incorporados ao MP4 final.</p></div><div className="export-setting-row"><div><b>FFmpeg</b><small>{ffmpegPath || 'Nenhum ffmpeg.exe selecionado. É necessário fornecer uma instalação confiável do FFmpeg.'}</small></div><button className="subtle-button" onClick={chooseFfmpeg}>Selecionar ffmpeg.exe</button></div><div className="export-setting-row"><div><b>Predefinição</b><small>1920 × 1080 · 30 FPS · H.264 · AAC · qualidade CRF 20</small></div><span className="settings-tag">MP4</span></div><div className="ai-consent-note"><LockKeyhole size={14}/><span>O FFmpeg precisa estar instalado no computador. Para manter o áudio original dos vídeos, mantenha ffprobe.exe na mesma pasta do ffmpeg.exe.</span></div><div className="modal-actions"><button className="subtle-button" disabled={exportBusy} onClick={()=>setModal('')}>Cancelar</button><button className="export-button" disabled={exportBusy||!clips.length} onClick={exportTimeline}>{exportBusy?'Renderizando…':'Escolher destino e exportar'}</button></div></div>:modal==='export-complete'?<div className="confirm-body"><p>O MP4 foi criado em:</p><div className="selected-installer-path">{lastExportedPath}</div><p>Você pode publicar esse vídeo diretamente no YouTube agora ou fechar esta janela.</p><div className="modal-actions"><button className="subtle-button" onClick={()=>setModal('')}>Fechar</button><button className="export-button" onClick={openYouTubePublish}><Youtube size={15}/> Publicar no YouTube</button></div></div>:modal==='settings'?<div className="settings-body">
+    {modal&&<div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget){if(modal==='local-update-found')dismissDetectedLocalUpdate();else if(modal==='confirm-duplicate-delete')setModal('duplicates');else setModal('');}}}><section className="modal-card"><div className="modal-head"><div><span className="eyebrow">{modal==='ai-hub'?'INTELIGÊNCIA ARTIFICIAL':modal==='stock-hub'?'BIBLIOTECA DE MÍDIA':modal==='youtube-publish'?'PUBLICAÇÃO':modal==='export'?'RENDERIZAÇÃO MP4':modal==='export-complete'?'EXPORTAÇÃO CONCLUÍDA':modal==='settings'?'PREFERÊNCIAS':(modal==='duplicates'||modal==='confirm-duplicate-delete')?'LIMPEZA DE MÍDIA':modal==='confirm-uninstall'?'CONFIRMAÇÃO':(modal==='confirm-local-update'||modal==='local-update-found')?'ATUALIZAÇÃO LOCAL':'CENTRAL DE AJUDA'}</span><h2>{modal==='ai-hub'?'Edit Master AI Hub':modal==='stock-hub'?'Media Hub':modal==='youtube-publish'?'Publicar no YouTube':modal==='export'?'Exportar vídeo MP4':modal==='export-complete'?'Seu vídeo está pronto':modal==='settings'?'Configurações do aplicativo':modal==='duplicates'?'Vídeos duplicados':modal==='confirm-duplicate-delete'?'Confirmar envio à Lixeira':modal==='confirm-uninstall'?'Confirmar desinstalação':modal==='confirm-local-update'?'Confirmar atualização':modal==='local-update-found'?'Atualização local encontrada':'Primeiros passos'}</h2></div><button className="icon-button" onClick={()=>modal==='local-update-found'?dismissDetectedLocalUpdate():modal==='confirm-duplicate-delete'?setModal('duplicates'):setModal('')}><X size={18}/></button></div>{modal==='ai-hub'?<AiHub mediaItems={media} selectedMediaId={selectedMedia} onSelectMedia={setSelectedMedia} subtitles={subtitles} onApplySrt={applyAiSubtitles} onClose={()=>setModal('')} setNotice={setNotice}/>:modal==='stock-hub'?<StockHub onMediaAdded={addDownloadedStockMedia} onClose={()=>setModal('')} setNotice={setNotice}/>:modal==='youtube-publish'?<YouTubePublish initialVideoPath={lastExportedPath} onClose={()=>setModal('')} setNotice={setNotice}/>:modal==='export'?<div className="export-modal-body"><div className="export-modal-intro"><b>Renderizar a montagem para MP4</b><p>Esta versão renderiza os segmentos visuais em sequência e mistura o áudio de forma básica. Efeitos de sobreposição, transições e títulos ainda não são incorporados ao MP4 final.</p></div><div className="export-setting-row"><div><b>FFmpeg</b><small>{ffmpegPath || 'Nenhum ffmpeg.exe selecionado. É necessário fornecer uma instalação confiável do FFmpeg.'}</small></div><button className="subtle-button" onClick={chooseFfmpeg}>Selecionar ffmpeg.exe</button></div><div className="export-setting-row"><div><b>Predefinição</b><small>1920 × 1080 · 60 FPS · H.264 · AAC · qualidade CRF 20</small></div><span className="settings-tag">MP4</span></div><div className="ai-consent-note"><LockKeyhole size={14}/><span>FFmpeg e FFprobe são necessários para a exportação. A extração de áudio usa o FFmpeg selecionado nas configurações.</span></div><div className="modal-actions"><button className="subtle-button" disabled={exportBusy} onClick={()=>setModal('')}>Cancelar</button><button className="export-button" disabled={exportBusy||!clips.length} onClick={exportTimeline}>{exportBusy?'Renderizando…':'Escolher destino e exportar'}</button></div></div>:modal==='export-complete'?<div className="confirm-body"><p>O MP4 foi criado em:</p><div className="selected-installer-path">{lastExportedPath}</div><p>Você pode publicar esse vídeo diretamente no YouTube agora ou fechar esta janela.</p><div className="modal-actions"><button className="subtle-button" onClick={()=>setModal('')}>Fechar</button><button className="export-button" onClick={openYouTubePublish}><Youtube size={15}/> Publicar no YouTube</button></div></div>:modal==='settings'?<div className="settings-body">
       <div className="settings-section-title"><Gauge size={15}/><span>Desempenho e aparência</span></div>
       <div className="settings-row"><div><b>Animações da interface</b><p>Escolha entre fluidez máxima, movimentos reduzidos ou animações desativadas. A opção máxima prioriza transições suaves sem efeitos pesados constantes.</p></div><select className="settings-select" value={draftPreferences.animations} onChange={e=>{setSettingsFeedback('');setDraftPreferences(v=>({...v,animations:e.target.value}));}}><option value="full">Fluidez máxima</option><option value="reduced">Reduzidas</option><option value="off">Desativadas</option></select></div>
       <div className="settings-row"><div><b>Efeitos visuais</b><p>Desative gradientes e sombras decorativas para economizar recursos gráficos.</p></div><label className="settings-switch"><input type="checkbox" checked={draftPreferences.visualEffects} onChange={e=>{setSettingsFeedback('');setDraftPreferences(v=>({...v,visualEffects:e.target.checked}));}}/><span>{draftPreferences.visualEffects?'Ativados':'Desativados'}</span></label></div>
