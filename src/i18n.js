@@ -1311,6 +1311,6 @@ export function withLocalization(Component) {
       React.createElement(Component, { ...props, uiLanguage: language })
     );
   }
-  LocalizedComponent.displayName = \`Localized(\${Component.displayName || Component.name || 'Component'})\`;
+  LocalizedComponent.displayName = 'Localized(' + (Component.displayName || Component.name || 'Component') + ');
   return LocalizedComponent;
 }
