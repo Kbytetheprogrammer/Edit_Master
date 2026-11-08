@@ -1141,6 +1141,50 @@ Object.assign(dictionaries.es, {
   'A renderização atual concatena os segmentos visuais em sequência e mistura áudio de forma básica. Ela ainda não reproduz integralmente todas as camadas, transições e títulos da prévia.':'El renderizado actual concatena los segmentos visuales en secuencia y mezcla el audio de forma básica. Todavía no reproduce por completo todas las capas, transiciones y títulos de la vista previa.',
   'O desinstalador foi iniciado. O Edit Master será fechado.':'El desinstalador se ha iniciado. Edit Master se cerrará ahora.'
 });
+
+Object.assign(dictionaries.en, {
+  "Não foi possível acessar o arquivo selecionado: {error}":"Could not access the selected file: {error}",
+  "O local escolhido não é uma pasta.":"The selected location is not a folder.",
+  "Não foi possível ler {}: {error}":"Could not read {}: {error}",
+  "O arquivo selecionado não existe ou não pode ser acessado.":"The selected file does not exist or cannot be accessed.",
+  "Tipo de áudio inválido: {error}":"Invalid audio type: {error}",
+  "Não foi possível acessar o Cofre de Credenciais: {error}":"Could not access Credential Manager: {error}",
+  "Não foi possível ler a credencial de {provider}: {other}":"Could not read the {provider} credential: {other}",
+  "A chave de API está vazia ou tem tamanho inválido.":"The API key is empty or has an invalid length.",
+  "Não foi possível salvar a chave: {error}":"Could not save the key: {error}",
+  "O armazenamento seguro das chaves do Media Hub está disponível no Windows.":"Secure Media Hub key storage is available on Windows.",
+  "Não foi possível consultar a credencial: {error}":"Could not check the credential: {error}",
+  "Não foi possível remover a credencial: {error}":"Could not remove the credential: {error}",
+  "Escolha Pexels ou Pixabay para imagens e vídeos; Freesound para áudio.":"Choose Pexels or Pixabay for images and videos; Freesound for audio.",
+  "Vídeo {}":"Video {}","Vídeo Pixabay {}":"Pixabay video {}",
+  "O tipo de mídia não corresponde ao provedor selecionado.":"The media type does not match the selected provider.",
+  "Não foi possível escolher um nome de arquivo livre.":"Could not choose an available filename.",
+  "Não foi possível acessar o Cofre de Credenciais do Windows: {error}":"Could not access Windows Credential Manager: {error}",
+  "Vídeo não encontrado: {error}":"Video not found: {error}",
+  "Não foi possível iniciar FFmpeg: {error}":"Could not start FFmpeg: {error}"
+});
+Object.assign(dictionaries.es, {
+  "Não foi possível acessar o arquivo selecionado: {error}":"No se pudo acceder al archivo seleccionado: {error}",
+  "O local escolhido não é uma pasta.":"La ubicación seleccionada no es una carpeta.",
+  "Não foi possível ler {}: {error}":"No se pudo leer {}: {error}",
+  "O arquivo selecionado não existe ou não pode ser acessado.":"El archivo seleccionado no existe o no se puede acceder a él.",
+  "Tipo de áudio inválido: {error}":"Tipo de audio no válido: {error}",
+  "Não foi possível acessar o Cofre de Credenciais: {error}":"No se pudo acceder al Administrador de credenciales: {error}",
+  "Não foi possível ler a credencial de {provider}: {other}":"No se pudo leer la credencial de {provider}: {other}",
+  "A chave de API está vazia ou tem tamanho inválido.":"La clave API está vacía o tiene una longitud no válida.",
+  "Não foi possível salvar a chave: {error}":"No se pudo guardar la clave: {error}",
+  "O armazenamento seguro das chaves do Media Hub está disponível no Windows.":"El almacenamiento seguro de claves de Media Hub está disponible en Windows.",
+  "Não foi possível consultar a credencial: {error}":"No se pudo consultar la credencial: {error}",
+  "Não foi possível remover a credencial: {error}":"No se pudo eliminar la credencial: {error}",
+  "Escolha Pexels ou Pixabay para imagens e vídeos; Freesound para áudio.":"Elige Pexels o Pixabay para imágenes y vídeos; Freesound para audio.",
+  "Vídeo {}":"Vídeo {}","Vídeo Pixabay {}":"Vídeo de Pixabay {}",
+  "O tipo de mídia não corresponde ao provedor selecionado.":"El tipo de medio no coincide con el proveedor seleccionado.",
+  "Não foi possível escolher um nome de arquivo livre.":"No se pudo elegir un nombre de archivo disponible.",
+  "Não foi possível acessar o Cofre de Credenciais do Windows: {error}":"No se pudo acceder al Administrador de credenciales de Windows: {error}",
+  "Vídeo não encontrado: {error}":"Vídeo no encontrado: {error}",
+  "Não foi possível iniciar FFmpeg: {error}":"No se pudo iniciar FFmpeg: {error}"
+});
+
 const attributeNames = new Set([
   'placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'label',
   'description', 'helperText', 'emptyLabel'
