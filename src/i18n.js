@@ -840,7 +840,7 @@ export function LocalizedTree({ language = 'pt-BR', children }) {
 
 export function withLocalization(Component) {
   function LocalizedComponent({ language = 'pt-BR', ...props }) {
-    return <LocalizedTree language={language}><Component {...props} /></LocalizedTree>;
+    return <LocalizedTree language={language}><Component {...props} uiLanguage={language} /></LocalizedTree>;
   }
   LocalizedComponent.displayName = `Localized(${Component.displayName || Component.name || 'Component'})`;
   return LocalizedComponent;
