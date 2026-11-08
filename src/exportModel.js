@@ -52,7 +52,7 @@ export function createExportRequest(media = [], clips = [], ffmpegPath, outputPa
       })),
       width: Number(options.width) || 1920,
       height: Number(options.height) || 1080,
-      fps: Number(options.fps) || 30,
+      fps: Number(options.fps) || 60,
       crf: Number(options.crf) || 20,
     },
   };
