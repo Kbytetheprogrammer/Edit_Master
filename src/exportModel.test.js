@@ -85,3 +85,17 @@ test('keeps export available for clips with default preview transforms', () => {
   const result = createExportRequest(media, defaults, 'ffmpeg.exe', 'video.mp4');
   assert.equal(result.ok, true);
 });
+
+
+test('rejects source ranges that start before zero or extend past media duration', () => {
+  for (const range of [{ start: -0.1, end: 5 }, { start: 0, end: 12.1 }]) {
+    const result = createExportRequest(media, [{ ...clips[0], ...range }], 'ffmpeg.exe', 'video.mp4');
+    assert.equal(result.ok, false);
+    assert.match(result.reason, /duração inválida/i);
+  }
+});
+
+test('accepts a valid trimmed source range at the media boundaries', () => {
+  const result = createExportRequest(media, [{ ...clips[0], start: 0, end: 12 }], 'ffmpeg.exe', 'video.mp4');
+  assert.equal(result.ok, true);
+});
