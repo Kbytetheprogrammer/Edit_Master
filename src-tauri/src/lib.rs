@@ -69,6 +69,16 @@ struct MediaDescriptor {
     size_bytes: u64,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CopiedMediaDescriptor {
+    source_path: String,
+    path: String,
+    name: String,
+    media_type: String,
+    size_bytes: u64,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ProjectMediaInput {
@@ -339,6 +349,94 @@ fn register_media_paths(
         });
     }
     Ok(media)
+}
+
+fn unique_media_destination(folder: &Path, file_name: &str) -> PathBuf {
+    let original = Path::new(file_name);
+    let stem = original.file_stem().and_then(|value| value.to_str()).unwrap_or("media");
+    let extension = original.extension().and_then(|value| value.to_str());
+    let first = folder.join(file_name);
+    if !first.exists() {
+        return first;
+    }
+    for index in 2..=10_000 {
+        let candidate_name = match extension {
+            Some(extension) => format!("{stem} ({index}).{extension}"),
+            None => format!("{stem} ({index})"),
+        };
+        let candidate = folder.join(candidate_name);
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    folder.join(format!("{}_{}.{}", stem, Uuid::new_v4(), extension.unwrap_or("bin")))
+}
+
+#[tauri::command]
+fn copy_media_to_folder(
+    app: tauri::AppHandle,
+    paths: Vec<String>,
+    folder_path: String,
+) -> Result<Vec<CopiedMediaDescriptor>, String> {
+    let requested_folder = PathBuf::from(folder_path);
+    fs::create_dir_all(&requested_folder)
+        .map_err(|error| format!("Não foi possível criar a pasta de mídia escolhida: {error}"))?;
+    let folder = requested_folder.canonicalize()
+        .map_err(|error| format!("Não foi possível acessar a pasta de mídia escolhida: {error}"))?;
+    if !folder.is_dir() {
+        return Err("Escolha uma pasta válida para armazenar as mídias.".into());
+    }
+
+    let scope = app.asset_protocol_scope();
+    let mut copied = Vec::new();
+    for raw_path in paths {
+        let source = PathBuf::from(raw_path).canonicalize()
+            .map_err(|error| format!("Não foi possível acessar um dos arquivos selecionados: {error}"))?;
+        if !source.is_file() {
+            continue;
+        }
+        let Some(media_type) = supported_media_type(&source) else {
+            continue;
+        };
+        let file_name = source.file_name().and_then(|value| value.to_str())
+            .ok_or("Não foi possível identificar o nome de um arquivo de mídia.")?;
+        let destination = if source.parent() == Some(folder.as_path()) {
+            source.clone()
+        } else {
+            let target = unique_media_destination(&folder, file_name);
+            fs::copy(&source, &target)
+                .map_err(|error| format!("Não foi possível copiar '{}': {error}", file_name))?;
+            target
+        };
+        scope.allow_file(&destination)
+            .map_err(|error| format!("Não foi possível liberar a prévia de '{}': {error}", file_name))?;
+        let metadata = fs::metadata(&destination)
+            .map_err(|error| format!("Não foi possível ler os detalhes de '{}': {error}", file_name))?;
+        let name = destination.file_name().and_then(|value| value.to_str())
+            .unwrap_or(file_name).to_string();
+        copied.push(CopiedMediaDescriptor {
+            source_path: source.to_string_lossy().into_owned(),
+            path: destination.to_string_lossy().into_owned(),
+            name,
+            media_type: media_type.to_string(),
+            size_bytes: metadata.len(),
+        });
+    }
+    Ok(copied)
+}
+
+#[tauri::command]
+fn move_media_to_recycle_bin(file_path: String) -> Result<(), String> {
+    let file = PathBuf::from(file_path)
+        .canonicalize()
+        .map_err(|error| format!("Não foi possível acessar o arquivo selecionado: {error}"))?;
+
+    if !file.is_file() || supported_media_type(&file).is_none() {
+        return Err("O caminho selecionado não é um arquivo de mídia compatível.".into());
+    }
+
+    trash::delete(&file)
+        .map_err(|error| format!("O Windows não conseguiu enviar a mídia à Lixeira: {error}"))
 }
 
 fn safe_asset_folder_name(stem: &str) -> String {
@@ -1342,8 +1440,72 @@ struct ExportTimelineRequest {
 
 fn default_export_width() -> u32 { 1920 }
 fn default_export_height() -> u32 { 1080 }
-fn default_export_fps() -> u32 { 30 }
+fn default_export_fps() -> u32 { 60 }
 fn default_export_crf() -> u32 { 20 }
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ExtractAudioRequest {
+    ffmpeg_path: String,
+    input_path: String,
+    output_path: String,
+    format: String,
+}
+
+fn audio_codec_args(format: &str) -> Result<Vec<&'static str>, String> {
+    match format {
+        "mp3" => Ok(vec!["-c:a", "libmp3lame", "-b:a", "192k"]),
+        "wav" => Ok(vec!["-c:a", "pcm_s16le"]),
+        "flac" => Ok(vec!["-c:a", "flac"]),
+        "aac" => Ok(vec!["-c:a", "aac", "-b:a", "192k"]),
+        "ogg" => Ok(vec!["-c:a", "libvorbis", "-q:a", "5"]),
+        _ => Err("Formato não suportado. Escolha MP3, WAV, FLAC, AAC ou OGG.".into()),
+    }
+}
+
+fn extract_audio_blocking(request: ExtractAudioRequest) -> Result<String, String> {
+    let ffmpeg = PathBuf::from(&request.ffmpeg_path);
+    if !ffmpeg.is_file() { return Err("Selecione um ffmpeg.exe válido.".into()); }
+    let input = PathBuf::from(&request.input_path);
+    if !input.is_file() { return Err("O arquivo de origem não foi encontrado.".into()); }
+    let format = request.format.trim().to_ascii_lowercase();
+    let codec_args = audio_codec_args(&format)?;
+    let output = PathBuf::from(&request.output_path);
+    let extension = output.extension().and_then(|value| value.to_str()).unwrap_or("").to_ascii_lowercase();
+    if extension != format { return Err("A extensão do arquivo de destino não corresponde ao formato escolhido.".into()); }
+    if let (Ok(source), Ok(destination)) = (input.canonicalize(), output.canonicalize()) {
+        if source == destination { return Err("O arquivo de destino não pode substituir o arquivo original.".into()); }
+    }
+    if output.exists() {
+        return Err("O arquivo de destino já existe. Escolha outro nome para evitar sobrescrever um áudio existente.".into());
+    }
+    if let Some(parent) = output.parent() {
+        fs::create_dir_all(parent).map_err(|error| format!("Não foi possível criar a pasta de destino: {error}"))?;
+    }
+    let mut command = Command::new(&ffmpeg);
+    command.args(["-hide_banner", "-nostdin", "-n", "-i"])
+        .arg(&input)
+        .args(["-map", "0:a:0", "-vn"])
+        .args(codec_args)
+        .arg(&output);
+    let result = command.output().map_err(|error| format!("Não foi possível iniciar o FFmpeg: {error}"))?;
+    if !result.status.success() {
+        let details = String::from_utf8_lossy(&result.stderr);
+        return Err(format!("O FFmpeg não conseguiu extrair uma faixa de áudio: {}", details.chars().rev().take(900).collect::<String>().chars().rev().collect::<String>()));
+    }
+    if !output.is_file() || output.metadata().map(|meta| meta.len() == 0).unwrap_or(true) {
+        return Err("O FFmpeg terminou sem produzir um arquivo de áudio válido.".into());
+    }
+    Ok(output.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+async fn extract_audio_file(request: ExtractAudioRequest) -> Result<serde_json::Value, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let output_path = extract_audio_blocking(request)?;
+        Ok(serde_json::json!({ "outputPath": output_path }))
+    }).await.map_err(|error| format!("A extração de áudio foi interrompida: {error}"))?
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -1868,13 +2030,68 @@ fn upload_video_to_youtube_blocking(_file_path: String, _title: String, _descrip
     Err("O envio para o YouTube está habilitado no Windows nesta versão.".into())
 }
 
-fn ffprobe_has_audio(ffmpeg_path: &Path, media_path: &Path) -> bool {
+fn probe_audio_result(success: bool, stdout: &str, stderr: &str) -> Result<bool, String> {
+    if !success {
+        return Err(format!(
+            "FFprobe não conseguiu identificar o áudio da mídia: {}",
+            stderr.chars().take(500).collect::<String>()
+        ));
+    }
+    Ok(!stdout.trim().is_empty())
+}
+
+fn ffprobe_has_audio(ffmpeg_path: &Path, media_path: &Path) -> Result<bool, String> {
     let probe_name = if cfg!(target_os = "windows") { "ffprobe.exe" } else { "ffprobe" };
     let probe_candidate = ffmpeg_path.parent().map(|parent| parent.join(probe_name)).filter(|candidate| candidate.is_file());
     let probe = probe_candidate.unwrap_or_else(|| PathBuf::from(if cfg!(target_os = "windows") { "ffprobe.exe" } else { "ffprobe" }));
-    Command::new(probe).args(["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_type", "-of", "csv=p=0"]).arg(media_path).output()
-        .map(|output| output.status.success() && !String::from_utf8_lossy(&output.stdout).trim().is_empty())
-        .unwrap_or(false)
+    let output = Command::new(probe)
+        .args(["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_type", "-of", "csv=p=0"])
+        .arg(media_path)
+        .output()
+        .map_err(|error| format!("Não foi possível iniciar FFprobe para verificar o áudio: {error}"))?;
+    probe_audio_result(
+        output.status.success(),
+        &String::from_utf8_lossy(&output.stdout),
+        &String::from_utf8_lossy(&output.stderr),
+    )
+}
+
+fn ffprobe_media_duration(ffmpeg_path: &Path, media_path: &Path) -> Result<f64, String> {
+    let probe_name = if cfg!(target_os = "windows") { "ffprobe.exe" } else { "ffprobe" };
+    let probe = ffmpeg_path.parent()
+        .map(|parent| parent.join(probe_name))
+        .filter(|candidate| candidate.is_file())
+        .unwrap_or_else(|| PathBuf::from(probe_name));
+    let output = Command::new(&probe)
+        .args(["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1"])
+        .arg(media_path)
+        .output()
+        .map_err(|error| format!("Não foi possível verificar o MP4 gerado com FFprobe: {error}"))?;
+    if !output.status.success() {
+        return Err(format!("FFprobe não conseguiu validar o MP4 gerado: {}", String::from_utf8_lossy(&output.stderr).chars().take(500).collect::<String>()));
+    }
+    let raw = String::from_utf8_lossy(&output.stdout);
+    let duration = raw.trim().parse::<f64>()
+        .map_err(|_| "O arquivo exportado não informou uma duração válida.".to_string())?;
+    if !duration.is_finite() || duration <= 0.0 {
+        return Err("O MP4 gerado está vazio ou possui duração inválida.".into());
+    }
+    Ok(duration)
+}
+
+fn atempo_chain(speed: f64) -> String {
+    let mut remaining = speed.clamp(0.25, 2.0);
+    let mut filters = Vec::new();
+    while remaining < 0.5 - f64::EPSILON {
+        filters.push("atempo=0.5".to_string());
+        remaining /= 0.5;
+    }
+    while remaining > 2.0 + f64::EPSILON {
+        filters.push("atempo=2.0".to_string());
+        remaining /= 2.0;
+    }
+    filters.push(format!("atempo={remaining:.4}"));
+    filters.join(",")
 }
 
 fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResult, String> {
@@ -1891,7 +2108,8 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
     let main_clips = request.clips.iter().filter(|clip| clip.media_type == "video" || clip.media_type == "image").collect::<Vec<_>>();
     let audio_clips = request.clips.iter().filter(|clip| clip.media_type == "audio").collect::<Vec<_>>();
     if main_clips.is_empty() { return Err("Adicione pelo menos um vídeo ou imagem à timeline antes de exportar.".into()); }
-    let mut durations = Vec::new();
+    let mut source_durations = Vec::new();
+    let mut render_durations = Vec::new();
     let mut main_paths = Vec::new();
     let mut source_audio = Vec::new();
     for clip in &main_clips {
@@ -1899,29 +2117,37 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         if !path.is_file() { return Err(format!("Mídia '{}' não é um arquivo válido.", path.display())); }
         let duration = (clip.end - clip.start).max(0.0).min(clip.duration.max(0.0));
         if !duration.is_finite() || duration <= 0.05 { return Err(format!("O segmento '{}' tem duração inválida.", path.display())); }
-        let has_audio = clip.media_type == "video" && !clip.audio_muted.unwrap_or(false) && ffprobe_has_audio(&ffmpeg, &path);
-        durations.push(duration);
+        let has_audio = if clip.media_type == "video" && !clip.audio_muted.unwrap_or(false) { ffprobe_has_audio(&ffmpeg, &path)? } else { false };
+        let speed = if clip.media_type == "image" { 1.0 } else { clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0) };
+        source_durations.push(duration);
+        render_durations.push(duration / speed);
         main_paths.push(path);
         source_audio.push(has_audio);
     }
     let mut audio_paths = Vec::new();
+    let mut audio_source_durations = Vec::new();
     let mut audio_durations = Vec::new();
+    let mut rendered_audio_clips = Vec::new();
     for clip in &audio_clips {
         if clip.audio_muted.unwrap_or(false) { continue; }
         let path = media_map.get(clip.media_id.as_str()).ok_or_else(|| format!("A mídia de áudio '{}' não está no projeto.", clip.media_id))?.canonicalize().map_err(|error| format!("Áudio indisponível: {error}"))?;
-        let duration = (clip.end - clip.start).max(0.0).min(clip.duration.max(0.0));
-        if !path.is_file() || duration <= 0.05 { continue; }
-        audio_paths.push(path); audio_durations.push(duration);
+        let source_duration = (clip.end - clip.start).max(0.0).min(clip.duration.max(0.0));
+        if !path.is_file() || source_duration <= 0.05 { continue; }
+        let speed = clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0);
+        audio_paths.push(path);
+        audio_source_durations.push(source_duration);
+        audio_durations.push(source_duration / speed);
+        rendered_audio_clips.push(*clip);
     }
 
     let mut command = Command::new(&ffmpeg);
     command.args(["-y", "-hide_banner", "-loglevel", "error"]);
     for (index, clip) in main_clips.iter().enumerate() {
         if clip.media_type == "image" {
-            command.args(["-loop", "1", "-framerate", &fps.to_string(), "-t", &format!("{:.4}", durations[index]), "-i"]);
+            command.args(["-loop", "1", "-framerate", &fps.to_string(), "-t", &format!("{:.4}", render_durations[index]), "-i"]);
             command.arg(&main_paths[index]);
         } else {
-            command.args(["-ss", &format!("{:.4}", clip.start.max(0.0)), "-t", &format!("{:.4}", durations[index]), "-i"]);
+            command.args(["-ss", &format!("{:.4}", clip.start.max(0.0)), "-t", &format!("{:.4}", source_durations[index]), "-i"]);
             command.arg(&main_paths[index]);
         }
     }
@@ -1931,15 +2157,15 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
     for (index, clip) in main_clips.iter().enumerate() {
         if source_audio[index] { audio_input_indices.push(index); }
         else {
-            command.args(["-f", "lavfi", "-t", &format!("{:.4}", durations[index]), "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]);
+            command.args(["-f", "lavfi", "-t", &format!("{:.4}", render_durations[index]), "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"]);
             audio_input_indices.push(next_input); next_input += 1;
         }
         let _ = clip;
     }
     let mut audio_track_indices = Vec::new();
     for (audio_index, path) in audio_paths.iter().enumerate() {
-        let clip = audio_clips.iter().filter(|clip| !clip.audio_muted.unwrap_or(false)).nth(audio_index).ok_or("Falha ao mapear faixa de áudio.")?;
-        command.args(["-ss", &format!("{:.4}", clip.start.max(0.0)), "-t", &format!("{:.4}", audio_durations[audio_index]), "-i"]);
+        let clip = rendered_audio_clips[audio_index];
+        command.args(["-ss", &format!("{:.4}", clip.start.max(0.0)), "-t", &format!("{:.4}", audio_source_durations[audio_index]), "-i"]);
         command.arg(path);
         audio_track_indices.push(next_input);
         next_input += 1;
@@ -1949,7 +2175,7 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
     let mut video_labels = Vec::new();
     let mut base_audio_labels = Vec::new();
     for (index, clip) in main_clips.iter().enumerate() {
-        let speed = clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0);
+        let speed = if clip.media_type == "image" { 1.0 } else { clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0) };
         let brightness = ((clip.color_brightness.unwrap_or(100.0).clamp(50.0, 150.0) - 100.0) / 100.0).clamp(-0.5, 0.5);
         let contrast = (clip.color_contrast.unwrap_or(100.0).clamp(50.0, 150.0) / 100.0).clamp(0.5, 1.5);
         let saturation = (clip.color_saturation.unwrap_or(100.0).clamp(0.0, 200.0) / 100.0).clamp(0.0, 2.0);
@@ -1957,28 +2183,30 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         video_labels.push(format!("[v{index}]"));
         let audio_index = audio_input_indices[index];
         let gain = if clip.audio_muted.unwrap_or(false) { 0.0 } else { clip.audio_gain.unwrap_or(1.0).clamp(0.0, 2.0) };
-        let mut chain = format!("[{audio_index}:a:0]atrim=duration={:.4},asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo,volume={gain:.4}", durations[index]);
-        let fade_in = clip.audio_fade_in.unwrap_or(0.0).clamp(0.0, durations[index]);
-        let fade_out = clip.audio_fade_out.unwrap_or(0.0).clamp(0.0, durations[index]);
+        let mut chain = format!("[{audio_index}:a:0]atrim=duration={:.4},asetpts=PTS-STARTPTS,{},aresample=48000,aformat=channel_layouts=stereo,volume={gain:.4}", source_durations[index], atempo_chain(speed));
+        let fade_in = clip.audio_fade_in.unwrap_or(0.0).clamp(0.0, render_durations[index]);
+        let fade_out = clip.audio_fade_out.unwrap_or(0.0).clamp(0.0, render_durations[index]);
         if fade_in > 0.0 { chain.push_str(&format!(",afade=t=in:st=0:d={fade_in:.4}")); }
-        if fade_out > 0.0 { chain.push_str(&format!(",afade=t=out:st={:.4}:d={fade_out:.4}", (durations[index] - fade_out).max(0.0))); }
+        if fade_out > 0.0 { chain.push_str(&format!(",afade=t=out:st={:.4}:d={fade_out:.4}", (render_durations[index] - fade_out).max(0.0))); }
         chain.push_str(&format!("[a{index}]"));
         filters.push(chain);
         base_audio_labels.push(format!("[a{index}]"));
     }
     filters.push(format!("{}concat=n={}:v=1:a=1[vout][abase]", video_labels.iter().zip(base_audio_labels.iter()).map(|(v,a)| format!("{v}{a}")).collect::<String>(), main_clips.len()));
-    let total_duration: f64 = durations.iter().sum();
+    let total_duration: f64 = render_durations.iter().sum();
     let mut extra_audio_labels = Vec::new();
     // Audio items are placed sequentially from the beginning of the soundtrack. This first
     // renderer intentionally does not claim arbitrary drag positioning or layered transitions.
     let mut audio_cursor: f64 = 0.0;
-    for (index, clip) in audio_clips.iter().filter(|clip| !clip.audio_muted.unwrap_or(false)).enumerate() {
+    for (index, clip) in rendered_audio_clips.iter().enumerate() {
         if index >= audio_track_indices.len() { break; }
         let audio_index = audio_track_indices[index];
         let duration = audio_durations[index];
+        let speed = clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0);
+        let source_duration = (clip.end - clip.start).max(0.0).min(clip.duration.max(0.0));
         let gain = clip.audio_gain.unwrap_or(1.0).clamp(0.0, 2.0);
         let delay_ms = (audio_cursor * 1000.0).round() as u64;
-        let mut chain = format!("[{audio_index}:a:0]atrim=duration={duration:.4},asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo,volume={gain:.4}");
+        let mut chain = format!("[{audio_index}:a:0]atrim=duration={source_duration:.4},asetpts=PTS-STARTPTS,{},aresample=48000,aformat=channel_layouts=stereo,volume={gain:.4}", atempo_chain(speed));
         if clip.audio_fade_in.unwrap_or(0.0) > 0.0 { chain.push_str(&format!(",afade=t=in:st=0:d={:.4}", clip.audio_fade_in.unwrap().clamp(0.0, duration))); }
         if clip.audio_fade_out.unwrap_or(0.0) > 0.0 { let fade = clip.audio_fade_out.unwrap().clamp(0.0, duration); chain.push_str(&format!(",afade=t=out:st={:.4}:d={fade:.4}", (duration-fade).max(0.0))); }
         chain.push_str(&format!(",adelay={delay_ms}|{delay_ms}[extra{index}]"));
@@ -2000,7 +2228,17 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         let details = String::from_utf8_lossy(&result.stderr);
         return Err(format!("A exportação MP4 falhou: {}", details.chars().take(1200).collect::<String>()));
     }
-    Ok(ExportResult { output_path: output.to_string_lossy().into_owned(), duration_seconds: total_duration, video_segments: main_clips.len(), audio_segments: audio_paths.len() })
+    let output_metadata = fs::metadata(&output)
+        .map_err(|error| format!("O FFmpeg terminou, mas o arquivo MP4 não foi encontrado: {error}"))?;
+    if output_metadata.len() < 1024 {
+        return Err("O arquivo MP4 gerado está vazio ou incompleto.".into());
+    }
+    let verified_duration = ffprobe_media_duration(&ffmpeg, &output)?;
+    let duration_tolerance = (total_duration * 0.02).max(0.5);
+    if (verified_duration - total_duration).abs() > duration_tolerance {
+        return Err(format!("O MP4 foi gerado, mas a duração ({verified_duration:.2}s) diverge da timeline ({total_duration:.2}s). Verifique os clipes antes de considerar a exportação concluída."));
+    }
+    Ok(ExportResult { output_path: output.to_string_lossy().into_owned(), duration_seconds: verified_duration, video_segments: main_clips.len(), audio_segments: audio_paths.len() })
 }
 
 #[tauri::command]
@@ -2012,6 +2250,22 @@ async fn export_timeline_mp4(request: ExportTimelineRequest) -> Result<ExportRes
 
 #[tauri::command]
 fn get_app_version(app: tauri::AppHandle) -> String { app.package_info().version.to_string() }
+
+#[tauri::command]
+fn get_bundled_media_tools(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let resource_dir = app.path().resource_dir()
+        .map_err(|error| format!("Não foi possível localizar os recursos instalados: {error}"))?;
+    let ffmpeg = resource_dir.join("resources").join("ffmpeg").join("ffmpeg.exe");
+    let ffprobe = resource_dir.join("resources").join("ffmpeg").join("ffprobe.exe");
+    let whisper = resource_dir.join("resources").join("whisper").join("whisper-cli.exe");
+    let whisper_model = resource_dir.join("resources").join("whisper").join("ggml-tiny.bin");
+    Ok(json!({
+        "ffmpegPath": if ffmpeg.is_file() { Some(ffmpeg.to_string_lossy().to_string()) } else { None },
+        "ffprobePath": if ffprobe.is_file() { Some(ffprobe.to_string_lossy().to_string()) } else { None },
+        "whisperExecutable": if whisper.is_file() { Some(whisper.to_string_lossy().to_string()) } else { None },
+        "whisperModelPath": if whisper_model.is_file() { Some(whisper_model.to_string_lossy().to_string()) } else { None }
+    }))
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -2038,6 +2292,8 @@ pub fn run() {
             scan_duplicate_videos,
             move_duplicate_to_recycle_bin,
             register_media_paths,
+            copy_media_to_folder,
+            move_media_to_recycle_bin,
             save_project_bundle,
             load_project_bundle,
             read_srt_file,
@@ -2056,9 +2312,108 @@ pub fn run() {
             youtube_disconnect,
             youtube_connect,
             upload_video_to_youtube,
+            extract_audio_file,
             export_timeline_mp4,
-            get_app_version
+            get_app_version,
+            get_bundled_media_tools
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o Edit Master");
+}
+
+
+#[cfg(test)]
+mod export_timing_tests {
+    use super::atempo_chain;
+
+    #[test]
+    fn builds_supported_atempo_chains_for_slow_motion() {
+        assert_eq!(atempo_chain(0.25), "atempo=0.5,atempo=0.5000");
+        assert_eq!(atempo_chain(0.5), "atempo=0.5000");
+        assert_eq!(atempo_chain(1.0), "atempo=1.0000");
+        assert_eq!(atempo_chain(2.0), "atempo=2.0000");
+    }
+
+    #[test]
+    fn clamps_speed_to_the_supported_editor_range() {
+        assert_eq!(atempo_chain(0.1), atempo_chain(0.25));
+        assert_eq!(atempo_chain(3.0), atempo_chain(2.0));
+    }
+}
+
+#[cfg(test)]
+mod audio_extraction_tests {
+    use super::audio_codec_args;
+
+    #[test]
+    fn supports_all_advertised_audio_formats() {
+        for format in ["mp3", "wav", "flac", "aac", "ogg"] {
+            assert!(audio_codec_args(format).is_ok(), "format should be supported: {format}");
+        }
+    }
+
+    #[test]
+    fn rejects_unknown_audio_formats() {
+        for format in ["", "mp4", "exe", "../mp3"] {
+            assert!(audio_codec_args(format).is_err(), "format should be rejected: {format}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod media_storage_tests {
+    use super::unique_media_destination;
+    use std::fs;
+
+    #[test]
+    fn duplicate_names_get_a_suffix_instead_of_overwriting() {
+        let folder = std::env::temp_dir().join(format!("edit-master-media-test-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&folder).expect("test folder should be created");
+        fs::write(folder.join("clip.mp4"), b"original").expect("original file should be created");
+
+        let destination = unique_media_destination(&folder, "clip.mp4");
+        assert_eq!(
+            destination.file_name().and_then(|name| name.to_str()),
+            Some("clip (2).mp4")
+        );
+
+        fs::remove_dir_all(folder).expect("test folder should be removed");
+    }
+
+    #[test]
+    fn unique_names_keep_the_original_extension() {
+        let folder = std::env::temp_dir().join(format!("edit-master-media-test-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&folder).expect("test folder should be created");
+
+        let destination = unique_media_destination(&folder, "footage.final.mov");
+        assert_eq!(
+            destination.file_name().and_then(|name| name.to_str()),
+            Some("footage.final.mov")
+        );
+
+        fs::remove_dir_all(folder).expect("test folder should be removed");
+    }
+}
+
+
+#[cfg(test)]
+mod ffprobe_audio_detection_tests {
+    use super::probe_audio_result;
+
+    #[test]
+    fn recognizes_audio_stream_output() {
+        assert_eq!(probe_audio_result(true, "audio\n", "").unwrap(), true);
+    }
+
+    #[test]
+    fn recognizes_video_without_audio_as_valid() {
+        assert_eq!(probe_audio_result(true, "", "").unwrap(), false);
+    }
+
+    #[test]
+    fn does_not_silently_treat_probe_failure_as_missing_audio() {
+        let error = probe_audio_result(false, "", "Invalid data found").unwrap_err();
+        assert!(error.contains("FFprobe"));
+        assert!(error.contains("Invalid data found"));
+    }
 }

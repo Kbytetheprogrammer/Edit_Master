@@ -1,9 +1,10 @@
+import { withLocalization, translateText } from './i18n.js';
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { CheckCircle2, ExternalLink, KeyRound, LoaderCircle, LockKeyhole, Upload, Youtube } from 'lucide-react';
 
-export default function YouTubePublish({ initialVideoPath = '', onClose, setNotice }) {
+function YouTubePublish({ initialVideoPath = '', onClose, setNotice, uiLanguage = 'pt-BR' }) {
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [connected, setConnected] = useState(false);
@@ -43,7 +44,7 @@ export default function YouTubePublish({ initialVideoPath = '', onClose, setNoti
 
   const chooseVideo = async () => {
     try {
-      const selected = await open({ multiple: false, directory: false, title: 'Selecionar MP4 exportado', filters: [{ name: 'Vídeo MP4', extensions: ['mp4'] }] });
+      const selected = await open({ multiple: false, directory: false, title: translateText('Selecionar MP4 exportado', uiLanguage), filters: [{ name: translateText('Vídeo MP4', uiLanguage), extensions: ['mp4'] }] });
       if (selected && !Array.isArray(selected)) setVideoPath(selected);
     } catch (error) { setFeedback(`Não foi possível selecionar o MP4: ${String(error)}`); }
   };
@@ -81,7 +82,7 @@ export default function YouTubePublish({ initialVideoPath = '', onClose, setNoti
     </section>
     <section className="youtube-section">
       <div className="youtube-section-head"><b><Upload size={15}/> Arquivo e detalhes</b></div>
-      <div className="youtube-file-row"><span title={videoPath}>{videoPath || 'Nenhum MP4 selecionado'}</span><button className="subtle-button" onClick={chooseVideo}>Selecionar MP4</button></div>
+      <div className="youtube-file-row"><span translate={videoPath ? "no" : undefined} title={videoPath}>{videoPath || 'Nenhum MP4 selecionado'}</span><button className="subtle-button" onClick={chooseVideo}>Selecionar MP4</button></div>
       <label className="ai-field-label">Título (até 100 caracteres)</label><input className="ai-text-input" maxLength={100} value={title} onChange={event => setTitle(event.target.value)} placeholder="Título do vídeo"/>
       <label className="ai-field-label">Descrição</label><textarea className="ai-textarea" maxLength={5000} rows={4} value={description} onChange={event => setDescription(event.target.value)} placeholder="Descrição do vídeo"/>
       <label className="ai-field-label">Tags (separadas por vírgula)</label><input className="ai-text-input" value={tags} onChange={event => setTags(event.target.value)} placeholder="edição, tutorial, Edit Master"/>
@@ -94,3 +95,5 @@ export default function YouTubePublish({ initialVideoPath = '', onClose, setNoti
     <div className="youtube-footer">O Edit Master não inclui credenciais de desenvolvedor próprias. A API do YouTube está sujeita a OAuth, cotas e regras de publicação do Google.</div>
   </div>;
 }
+
+export default withLocalization(YouTubePublish);

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - v1.0-development
   workflow_dispatch:
 
 permissions:
@@ -17,7 +18,7 @@ jobs:
   build-windows:
     name: Build Edit Master for Windows
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - name: Check out repository
@@ -32,11 +33,47 @@ jobs:
       - name: Set up stable Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Prepare bundled media tools
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $resourceRoot = Join-Path $env:GITHUB_WORKSPACE "src-tauri/resources"
+          $ffmpegDir = Join-Path $resourceRoot "ffmpeg"
+          $whisperDir = Join-Path $resourceRoot "whisper"
+          New-Item -ItemType Directory -Force -Path $ffmpegDir, $whisperDir | Out-Null
+
+          $ffmpegZip = Join-Path $env:RUNNER_TEMP "ffmpeg.zip"
+          Invoke-WebRequest "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip" -OutFile $ffmpegZip
+          $ffmpegExtract = Join-Path $env:RUNNER_TEMP "ffmpeg"
+          Expand-Archive -Path $ffmpegZip -DestinationPath $ffmpegExtract -Force
+          $ffmpegExe = Get-ChildItem $ffmpegExtract -Filter ffmpeg.exe -Recurse | Select-Object -First 1
+          $ffprobeExe = Get-ChildItem $ffmpegExtract -Filter ffprobe.exe -Recurse | Select-Object -First 1
+          if (-not $ffmpegExe -or -not $ffprobeExe) { throw "FFmpeg/FFprobe não encontrados no pacote baixado." }
+          Copy-Item $ffmpegExe.FullName (Join-Path $ffmpegDir "ffmpeg.exe") -Force
+          Copy-Item $ffprobeExe.FullName (Join-Path $ffmpegDir "ffprobe.exe") -Force
+
+          git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git (Join-Path $env:RUNNER_TEMP "whisper.cpp")
+          cmake -S (Join-Path $env:RUNNER_TEMP "whisper.cpp") -B (Join-Path $env:RUNNER_TEMP "whisper-build") -A x64 -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_SERVER=OFF
+          cmake --build (Join-Path $env:RUNNER_TEMP "whisper-build") --config Release --target whisper-cli
+          $whisperExe = Get-ChildItem (Join-Path $env:RUNNER_TEMP "whisper-build") -Filter whisper-cli.exe -Recurse | Select-Object -First 1
+          if (-not $whisperExe) { throw "whisper-cli.exe não foi gerado." }
+          Copy-Item $whisperExe.FullName (Join-Path $whisperDir "whisper-cli.exe") -Force
+          Get-ChildItem (Join-Path $env:RUNNER_TEMP "whisper-build") -Filter *.dll -Recurse | ForEach-Object { Copy-Item $_.FullName $whisperDir -Force }
+
+          Invoke-WebRequest "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin" -OutFile (Join-Path $whisperDir "ggml-tiny.bin")
+          if ((Get-Item (Join-Path $whisperDir "ggml-tiny.bin")).Length -lt 1000000) { throw "Modelo Whisper baixado parece inválido." }
+
       - name: Install JavaScript dependencies
         run: npm ci
 
       - name: Run project tests
         run: npm test
+
+      - name: Run Rust backend tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: Build the NSIS installer
         run: npm run tauri:build

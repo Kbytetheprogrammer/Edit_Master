@@ -1,3 +1,4 @@
+import { withLocalization, translateText } from './i18n.js';
 import { useEffect, useMemo, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -27,7 +28,7 @@ function makeSrt(cues) {
   return cues.map((cue, index) => `${index + 1}\n${stamp(cue.start)} --> ${stamp(cue.end)}\n${String(cue.text || '').trim()}`).join('\n\n');
 }
 
-export default function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = [], onApplySrt, onClose, setNotice }) {
+function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = [], onApplySrt, onClose, setNotice, uiLanguage = 'pt-BR' }) {
   const [provider, setProvider] = useState(() => localStorage.getItem(PROVIDER_KEY) || 'local');
   const [task, setTask] = useState('generate');
   const [language, setLanguage] = useState('pt');
@@ -51,6 +52,25 @@ export default function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia,
   useEffect(() => {
     if (!availableMedia.some(item => item.id === targetId) && availableMedia.length) setTargetId(availableMedia[0].id);
   }, [availableMedia, targetId]);
+  useEffect(() => {
+    let cancelled = false;
+    invoke('get_bundled_media_tools').then(tools => {
+      if (cancelled || !tools) return;
+      if (tools.whisperExecutable && !localStorage.getItem(WHISPER_EXE_KEY)) {
+        setWhisperExecutable(tools.whisperExecutable);
+        localStorage.setItem(WHISPER_EXE_KEY, tools.whisperExecutable);
+      }
+      if (tools.whisperModelPath && !localStorage.getItem(WHISPER_MODEL_KEY)) {
+        setWhisperModel(tools.whisperModelPath);
+        localStorage.setItem(WHISPER_MODEL_KEY, tools.whisperModelPath);
+      }
+      if (tools.ffmpegPath && !localStorage.getItem(FFMPEG_KEY)) {
+        setFfmpegPath(tools.ffmpegPath);
+        localStorage.setItem(FFMPEG_KEY, tools.ffmpegPath);
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(PROVIDER_KEY, provider);
@@ -70,10 +90,10 @@ export default function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia,
   const selectPath = async (kind) => {
     try {
       const config = kind === 'whisper'
-        ? { title: 'Selecionar whisper-cli.exe', filters: [{ name: 'Executável Whisper', extensions: ['exe'] }] }
+        ? { title: translateText('Selecionar whisper-cli.exe', uiLanguage), filters: [{ name: translateText('Executável Whisper', uiLanguage), extensions: ['exe'] }] }
         : kind === 'model'
-          ? { title: 'Selecionar modelo Whisper', filters: [{ name: 'Modelo Whisper', extensions: ['bin'] }] }
-          : { title: 'Selecionar ffmpeg.exe', filters: [{ name: 'FFmpeg', extensions: ['exe'] }] };
+          ? { title: translateText('Selecionar modelo Whisper', uiLanguage), filters: [{ name: translateText('Modelo Whisper', uiLanguage), extensions: ['bin'] }] }
+          : { title: translateText('Selecionar ffmpeg.exe', uiLanguage), filters: [{ name: 'FFmpeg', extensions: ['exe'] }] };
       const selected = await open({ multiple: false, directory: false, ...config });
       if (!selected || Array.isArray(selected)) return;
       if (kind === 'whisper') { setWhisperExecutable(selected); localStorage.setItem(WHISPER_EXE_KEY, selected); }
@@ -125,7 +145,7 @@ export default function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia,
           targetLanguage,
         });
       } else if (provider === 'local') {
-        if (!whisperExecutable || !whisperModel) throw new Error('Selecione whisper-cli.exe e o modelo Whisper .bin antes de transcrever.');
+        if (!whisperExecutable || !whisperModel) throw new Error('Os componentes Whisper não foram encontrados no instalador. Reinstale o Edit Master ou selecione whisper-cli.exe e o modelo Whisper .bin manualmente.');
         srtText = await invoke('transcribe_local_whisper', {
           mediaPath: targetMedia.sourcePath,
           mediaType: targetMedia.type,
@@ -158,7 +178,7 @@ export default function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia,
   return <div className="ai-hub-body">
     <div className="ai-hub-intro"><div className="ai-hub-mark"><Sparkles size={26}/></div><div><span className="eyebrow">EDIT MASTER INTELLIGENCE</span><h3>AI Hub</h3><p>Escolha o mecanismo para criar, revisar ou traduzir legendas.</p></div></div>
     <div className="ai-provider-grid">
-      {PROVIDERS.map(item => { const Icon = item.icon; return <button type="button" key={item.id} className={`ai-provider-card ${provider === item.id ? 'selected' : ''}`} onClick={() => setProvider(item.id)}><div className="ai-provider-icon"><Icon size={20}/></div><div><b>{item.name}</b><small>{item.brand}</small></div>{provider === item.id && <CheckCircle2 className="ai-provider-check" size={16}/>}<span>{item.subtitle}</span></button>; })}
+      {PROVIDERS.map(item => { const Icon = item.icon; return <button type="button" key={item.id} className={`ai-provider-card ${provider === item.id ? 'selected' : ''}`} onClick={() => setProvider(item.id)}><div className="ai-provider-icon"><Icon size={20}/></div><div><b translate="no">{item.name}</b><small>{item.brand}</small></div>{provider === item.id && <CheckCircle2 className="ai-provider-check" size={16}/>}<span>{item.subtitle}</span></button>; })}
     </div>
     <div className="ai-provider-description"><b>{selectedProvider.name}</b><span>{selectedProvider.description}</span></div>
     {provider !== 'local' && <section className="ai-config-section">
@@ -169,16 +189,16 @@ export default function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia,
     </section>}
     {provider === 'local' && <section className="ai-config-section">
       <div className="ai-section-title"><Cpu size={15}/> <b>Modelo local Whisper.cpp</b><span className="ai-key-status connected">Offline</span></div>
-      <div className="ai-path-row"><div><b>Executável whisper-cli.exe</b><small>{whisperExecutable || 'Nenhum executável selecionado'}</small></div><button className="subtle-button" onClick={() => selectPath('whisper')}>Selecionar</button></div>
-      <div className="ai-path-row"><div><b>Modelo de reconhecimento (.bin)</b><small>{whisperModel || 'Nenhum modelo selecionado'}</small></div><button className="subtle-button" onClick={() => selectPath('model')}>Selecionar</button></div>
-      <div className="ai-path-row"><div><b>FFmpeg (opcional para áudio; necessário para vídeo)</b><small>{ffmpegPath || 'Usar ffmpeg.exe disponível no PATH'}</small></div><button className="subtle-button" onClick={() => selectPath('ffmpeg')}>Selecionar</button></div>
+      <div className="ai-path-row"><div><b>Executável whisper-cli.exe</b><small>{whisperExecutable || 'Detectando Whisper incluído no instalador…'}</small></div><button className="subtle-button" onClick={() => selectPath('whisper')}>Selecionar</button></div>
+      <div className="ai-path-row"><div><b>Modelo de reconhecimento (.bin)</b><small>{whisperModel || 'Detectando modelo Tiny incluído no instalador…'}</small></div><button className="subtle-button" onClick={() => selectPath('model')}>Selecionar</button></div>
+      <div className="ai-path-row"><div><b>FFmpeg (opcional para áudio; necessário para vídeo)</b><small>{ffmpegPath || 'FFmpeg incluído no instalador será detectado automaticamente'}</small></div><button className="subtle-button" onClick={() => selectPath('ffmpeg')}>Selecionar</button></div>
     </section>}
     <section className="ai-config-section">
       <div className="ai-section-title"><FileAudio size={15}/> <b>Mídia e tarefa</b></div>
       <label className="ai-field-label">Vídeo ou áudio</label>
       <select className="ai-select" value={targetId} onChange={event => { setTargetId(event.target.value); onSelectMedia?.(event.target.value); }}>
         <option value="">Selecione uma mídia importada</option>
-        {availableMedia.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+        {availableMedia.map(item => <option translate="no" key={item.id} value={item.id}>{item.name}</option>)}
       </select>
       <div className="ai-fields-two"><div><label className="ai-field-label">Idioma do áudio</label><input className="ai-text-input" value={language} onChange={event => setLanguage(event.target.value)} placeholder="pt, en ou auto"/></div><div><label className="ai-field-label">Idioma de tradução</label><input className="ai-text-input" value={targetLanguage} onChange={event => setTargetLanguage(event.target.value)} placeholder="English, Português…"/></div></div>
       {provider === 'claude' ? <div className="ai-task-note"><Languages size={14}/> Claude revisa ou traduz legendas existentes. Primeiro gere ou importe um SRT com outro provedor.</div> : <div className="ai-task-note"><Mic2 size={14}/> {provider === 'gpt' ? 'O GPT retorna texto; os tempos das legendas serão estimados pela duração do arquivo nesta versão.' : provider === 'gemini' ? 'O Gemini pode retornar segmentos com tempos; a qualidade dos tempos depende da resposta da API.' : 'Whisper gera um arquivo SRT localmente, sem enviar seu áudio à nuvem.'}</div>}
@@ -190,3 +210,5 @@ export default function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia,
     <div className="ai-footer-note">As APIs de nuvem exigem contas e chaves próprias, e podem ter custos. A modalidade local não exige chave, mas precisa do executável e do modelo Whisper baixados pelo usuário.</div>
   </div>;
 }
+
+export default withLocalization(AiHub);
