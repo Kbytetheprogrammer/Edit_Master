@@ -2077,6 +2077,22 @@ async fn export_timeline_mp4(request: ExportTimelineRequest) -> Result<ExportRes
 #[tauri::command]
 fn get_app_version(app: tauri::AppHandle) -> String { app.package_info().version.to_string() }
 
+#[tauri::command]
+fn get_bundled_media_tools(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let resource_dir = app.path().resource_dir()
+        .map_err(|error| format!("Não foi possível localizar os recursos instalados: {error}"))?;
+    let ffmpeg = resource_dir.join("resources").join("ffmpeg").join("ffmpeg.exe");
+    let ffprobe = resource_dir.join("resources").join("ffmpeg").join("ffprobe.exe");
+    let whisper = resource_dir.join("resources").join("whisper").join("whisper-cli.exe");
+    let whisper_model = resource_dir.join("resources").join("whisper").join("ggml-tiny.bin");
+    Ok(json!({
+        "ffmpegPath": if ffmpeg.is_file() { Some(ffmpeg.to_string_lossy().to_string()) } else { None },
+        "ffprobePath": if ffprobe.is_file() { Some(ffprobe.to_string_lossy().to_string()) } else { None },
+        "whisperExecutable": if whisper.is_file() { Some(whisper.to_string_lossy().to_string()) } else { None },
+        "whisperModelPath": if whisper_model.is_file() { Some(whisper_model.to_string_lossy().to_string()) } else { None }
+    }))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -2122,7 +2138,8 @@ pub fn run() {
             upload_video_to_youtube,
             extract_audio_file,
             export_timeline_mp4,
-            get_app_version
+            get_app_version,
+            get_bundled_media_tools
         ])
         .run(tauri::generate_context!())
         .expect("erro ao iniciar o Edit Master");
