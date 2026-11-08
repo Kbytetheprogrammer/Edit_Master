@@ -1,4 +1,4 @@
-import { withLocalization } from './i18n.js';
+import { withLocalization, translateText } from './i18n.js';
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
@@ -44,7 +44,7 @@ function YouTubePublish({ initialVideoPath = '', onClose, setNotice }) {
 
   const chooseVideo = async () => {
     try {
-      const selected = await open({ multiple: false, directory: false, title: 'Selecionar MP4 exportado', filters: [{ name: 'Vídeo MP4', extensions: ['mp4'] }] });
+      const selected = await open({ multiple: false, directory: false, title: translateText('Selecionar MP4 exportado', uiLanguage), filters: [{ name: translateText('Vídeo MP4', uiLanguage), extensions: ['mp4'] }] });
       if (selected && !Array.isArray(selected)) setVideoPath(selected);
     } catch (error) { setFeedback(`Não foi possível selecionar o MP4: ${String(error)}`); }
   };
