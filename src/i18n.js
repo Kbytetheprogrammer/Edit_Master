@@ -123,7 +123,7 @@ const dictionaries = {
     'Configure uma chave, digite um termo e clique em Buscar.':'Configure a key, enter a search term, and click Search.',
     'Créditos e licenças':'Credits and licenses',
     'Confira sempre a licença do material antes de publicar. O Edit Master salva um arquivo de origem/licença ao lado de cada download e preserva os créditos ao salvar o projeto.':'Always check the material license before publishing. Edit Master saves a source/license file next to each download and preserves credits when saving the project.',
-    'Imagens e vídeos fornecidos por':'Images and videos provided by','e':'and',
+    'Imagens e vídeos fornecidos por':'Images and videos provided by',
     'As APIs são gratuitas dentro dos limites e termos de cada provedor; cada usuário fornece sua chave.':'APIs are free within each provider’s limits and terms; each user supplies their own key.',
     'Fechar Media Hub':'Close Media Hub','EDIT MASTER PUBLISHING':'EDIT MASTER PUBLISHING',
     'Publicar no YouTube':'Publish to YouTube','Envie um MP4 exportado diretamente para seu canal.':'Upload an exported MP4 directly to your channel.',
@@ -329,7 +329,7 @@ const dictionaries = {
     'Configure uma chave, digite um termo e clique em Buscar.':'Configura una clave, escribe un término y pulsa Buscar.',
     'Créditos e licenças':'Créditos y licencias',
     'Confira sempre a licença do material antes de publicar. O Edit Master salva um arquivo de origem/licença ao lado de cada download e preserva os créditos ao salvar o projeto.':'Comprueba siempre la licencia del material antes de publicarlo. Edit Master guarda un archivo de origen/licencia junto a cada descarga y conserva los créditos al guardar el proyecto.',
-    'Imagens e vídeos fornecidos por':'Imágenes y vídeos proporcionados por','e':'y',
+    'Imagens e vídeos fornecidos por':'Imágenes y vídeos proporcionados por',
     'As APIs são gratuitas dentro dos limites e termos de cada provedor; cada usuário fornece sua chave.':'Las API son gratuitas dentro de los límites y condiciones de cada proveedor; cada usuario proporciona su clave.',
     'Fechar Media Hub':'Cerrar Media Hub','EDIT MASTER PUBLISHING':'PUBLICACIÓN DE EDIT MASTER',
     'Publicar no YouTube':'Publicar en YouTube','Envie um MP4 exportado diretamente para seu canal.':'Envía un MP4 exportado directamente a tu canal.',
@@ -1240,6 +1240,7 @@ function translateNode(node, language) {
   if (typeof node === 'string') return translateText(node, language);
   if (Array.isArray(node)) return node.map(child => translateNode(child, language));
   if (!React.isValidElement(node)) return node;
+  if (node.props.translate === 'no' || node.props['data-no-translate'] === true) return node;
 
   const props = {};
   for (const [key, value] of Object.entries(node.props)) {
