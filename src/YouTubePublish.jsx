@@ -4,7 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { CheckCircle2, ExternalLink, KeyRound, LoaderCircle, LockKeyhole, Upload, Youtube } from 'lucide-react';
 
-function YouTubePublish({ initialVideoPath = '', onClose, setNotice }) {
+function YouTubePublish({ initialVideoPath = '', onClose, setNotice, uiLanguage = 'pt-BR' }) {
   const [clientId, setClientId] = useState('');
   const [clientSecret, setClientSecret] = useState('');
   const [connected, setConnected] = useState(false);
