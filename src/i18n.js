@@ -793,6 +793,58 @@ Object.assign(dictionaries.es, {
   'O arquivo de saída deve terminar em .mp4.':'El archivo de salida debe terminar en .mp4.',
   'Adicione pelo menos um vídeo ou imagem à timeline antes de exportar.':'Añade al menos un vídeo o una imagen a la línea de tiempo antes de exportar.'
 });
+Object.assign(dictionaries.en, {
+  'VIDEO STUDIO':'VIDEO STUDIO','Selecionar whisper-cli.exe':'Select whisper-cli.exe','Executável Whisper':'Whisper executable',
+  'Selecionar modelo Whisper':'Select Whisper model','Modelo Whisper':'Whisper model',
+  'Escolha onde salvar a mídia stock':'Choose where to save stock media',
+  'Salvar áudio extraído':'Save extracted audio','Salvar áudio':'Save audio',
+  'Importar legendas SubRip':'Import SubRip subtitles','Legendas SubRip':'SubRip subtitles',
+  'Selecionar MP4 exportado':'Select exported MP4',
+  'Não foi possível iniciar a atualização: ${String(error)}':'Could not start the update: ${String(error)}',
+  'Não foi possível selecionar a pasta: ${String(error)}':'Could not select the folder: ${String(error)}',
+  'Não foi possível abrir o seletor de arquivos: ${String(error)}':'Could not open the file picker: ${String(error)}',
+  'Não foi possível escolher o destino: ${String(error)}':'Could not choose the destination: ${String(error)}',
+  'Exporte o vídeo MP4 primeiro e confira o arquivo final.':'Export the MP4 video first and check the final file.',
+  'Abra YouTube na barra superior e siga o fluxo de conexão da conta.':'Open YouTube from the top bar and follow the account connection flow.',
+  'Preencha título, descrição e demais informações solicitadas.':'Fill in the title, description, and other requested information.',
+  'Confira o vídeo e as configurações antes de confirmar o envio. A publicação depende da autorização da conta e das regras do YouTube.':'Check the video and settings before confirming the upload. Publishing depends on account authorization and YouTube rules.',
+  'O orçamento de cache controla a preferência de memória/cache quando a opção estiver disponível.':'The cache budget controls the memory/cache preference when the option is available.',
+  'Se a prévia ficar lenta, feche outros aplicativos pesados e reduza a carga de mídia simultânea.':'If the preview is slow, close other resource-heavy apps and reduce simultaneous media load.',
+  'Se o Media Hub não buscar resultados, confira a chave de API, a conexão e os limites do provedor.':'If Media Hub returns no results, check the API key, connection, and provider limits.',
+  'Se a transcrição local falhar, confirme os caminhos do whisper-cli.exe, do modelo .bin e do FFmpeg.':'If local transcription fails, check the paths to whisper-cli.exe, the .bin model, and FFmpeg.',
+  'Antes de exportar, confirme que a Timeline contém pelo menos um vídeo ou uma imagem e que os arquivos de origem continuam acessíveis.':'Before exporting, make sure the Timeline contains at least one video or image and the source files are still accessible.',
+  'Escolha um destino com extensão .mp4 e aguarde a conclusão.':'Choose a destination with the .mp4 extension and wait for completion.',
+  'A predefinição de destino é Full HD 1920 × 1080 a 60 FPS, com vídeo H.264 e áudio AAC.':'The target preset is Full HD 1920 × 1080 at 60 FPS, with H.264 video and AAC audio.',
+  'Importante: a renderização MP4 atual ainda não incorpora todas as sobreposições e animações da prévia.':'Important: current MP4 rendering does not yet include all preview overlays and animations.',
+  'Importe arquivos de áudio pela mesma opção Importar arquivos e coloque-os na faixa de áudio.':'Import audio files using Import files and place them on the audio track.',
+  'A transcrição local exige whisper-cli.exe, um modelo Whisper .bin e FFmpeg acessível. Nesta versão esses componentes ainda precisam ser selecionados/configurados pelo usuário.':'Local transcription requires whisper-cli.exe, a Whisper .bin model, and accessible FFmpeg. The candidate installer includes Whisper and FFmpeg; verify automatic detection in AI Hub.',
+  'O instalador inclui whisper-cli.exe e o modelo Tiny, e o aplicativo tenta detectá-los automaticamente. Se a detecção falhar, confira os caminhos no AI Hub.':'The installer includes whisper-cli.exe and the Tiny model, and the app attempts to detect them automatically. If detection fails, check the paths in AI Hub.'
+});
+Object.assign(dictionaries.es, {
+  'VIDEO STUDIO':'ESTUDIO DE VÍDEO','Selecionar whisper-cli.exe':'Seleccionar whisper-cli.exe','Executável Whisper':'Ejecutable Whisper',
+  'Selecionar modelo Whisper':'Seleccionar modelo Whisper','Modelo Whisper':'Modelo Whisper',
+  'Escolha onde salvar a mídia stock':'Elige dónde guardar el recurso multimedia',
+  'Salvar áudio extraído':'Guardar audio extraído','Salvar áudio':'Guardar audio',
+  'Importar legendas SubRip':'Importar subtítulos SubRip','Legendas SubRip':'Subtítulos SubRip',
+  'Selecionar MP4 exportado':'Seleccionar MP4 exportado',
+  'Não foi possível iniciar a atualização: ${String(error)}':'No se pudo iniciar la actualización: ${String(error)}',
+  'Não foi possível selecionar a pasta: ${String(error)}':'No se pudo seleccionar la carpeta: ${String(error)}',
+  'Não foi possível abrir o seletor de arquivos: ${String(error)}':'No se pudo abrir el selector de archivos: ${String(error)}',
+  'Não foi possível escolher o destino: ${String(error)}':'No se pudo elegir el destino: ${String(error)}',
+  'Exporte o vídeo MP4 primeiro e confira o arquivo final.':'Exporta primero el vídeo MP4 y comprueba el archivo final.',
+  'Abra YouTube na barra superior e siga o fluxo de conexão da conta.':'Abre YouTube desde la barra superior y sigue el proceso de conexión de la cuenta.',
+  'Preencha título, descrição e demais informações solicitadas.':'Completa el título, la descripción y el resto de la información solicitada.',
+  'Confira o vídeo e as configurações antes de confirmar o envio. A publicação depende da autorização da conta e das regras do YouTube.':'Comprueba el vídeo y la configuración antes de confirmar el envío. La publicación depende de la autorización de la cuenta y de las normas de YouTube.',
+  'O orçamento de cache controla a preferência de memória/cache quando a opção estiver disponível.':'El límite de caché controla la preferencia de memoria/caché cuando la opción esté disponible.',
+  'Se a prévia ficar lenta, feche outros aplicativos pesados e reduza a carga de mídia simultânea.':'Si la vista previa va lenta, cierra otras aplicaciones exigentes y reduce la carga multimedia simultánea.',
+  'Se o Media Hub não buscar resultados, confira a chave de API, a conexão e os limites do provedor.':'Si Media Hub no encuentra resultados, comprueba la clave API, la conexión y los límites del proveedor.',
+  'Se a transcrição local falhar, confirme os caminhos do whisper-cli.exe, do modelo .bin e do FFmpeg.':'Si falla la transcripción local, comprueba las rutas de whisper-cli.exe, del modelo .bin y de FFmpeg.',
+  'Antes de exportar, confirme que a Timeline contém pelo menos um vídeo ou uma imagem e que os arquivos de origem continuam acessíveis.':'Antes de exportar, asegúrate de que la Línea de tiempo contiene al menos un vídeo o una imagen y que los archivos de origen siguen accesibles.',
+  'Escolha um destino com extensão .mp4 e aguarde a conclusão.':'Elige un destino con extensión .mp4 y espera a que termine.',
+  'A predefinição de destino é Full HD 1920 × 1080 a 60 FPS, com vídeo H.264 e áudio AAC.':'El ajuste de destino es Full HD 1920 × 1080 a 60 FPS, con vídeo H.264 y audio AAC.',
+  'Importante: a renderização MP4 atual ainda não incorpora todas as sobreposições e animações da prévia.':'Importante: el renderizado MP4 actual todavía no incluye todas las superposiciones y animaciones de la vista previa.',
+  'O instalador inclui whisper-cli.exe e o modelo Tiny, e o aplicativo tenta detectá-los automaticamente. Se a detecção falhar, confira os caminhos no AI Hub.':'El instalador incluye whisper-cli.exe y el modelo Tiny, y la aplicación intenta detectarlos automáticamente. Si falla la detección, comprueba las rutas en AI Hub.'
+});
 const attributeNames = new Set([
   'placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'label',
   'description', 'helperText', 'emptyLabel'
