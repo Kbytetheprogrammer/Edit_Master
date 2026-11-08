@@ -2118,6 +2118,7 @@ pub fn run() {
             scan_duplicate_videos,
             move_duplicate_to_recycle_bin,
             register_media_paths,
+            move_media_to_recycle_bin,
             save_project_bundle,
             load_project_bundle,
             read_srt_file,
