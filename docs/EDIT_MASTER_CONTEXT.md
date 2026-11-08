@@ -203,3 +203,15 @@ Não publicar como estável apenas porque o CI passou. Exigir:
 **Última consolidação deste documento:** 2026-11-08.  
 **Branch de referência:** `v1.0-development`.  
 **Estado:** resumo de continuidade; conferir o repositório e o CI para o estado mais recente.
+
+
+## Atualização de trabalho — 2026-11-08 (continuação)
+
+- A execução GitHub Actions `42527067709` concluiu com sucesso: testes JS, testes Rust, build NSIS e upload do instalador. Essa execução antecede as alterações abaixo e não as valida.
+- Commits posteriores:
+  - `2ed96c769b72b16e541eb0e2f55e90f1d4cca745` — corrigiu orientação desatualizada sobre fades de áudio: o renderizador Rust já aplica fade-in/fade-out na exportação MP4; a prévia ainda não simula os fades.
+  - `a63ff0e858cded88e48a65a61be905b1a82a659e` e `4f644825e9567d3fe21cf36b734c8a8508a1743a` — atualizam as traduções EN/ES da mensagem de fades.
+  - `bcc53dd0308ced150537fb9c015fd4c44c9a6b56` — adiciona testes para as traduções atualizadas.
+  - `979b18d8053866d94e310fbd98b4dd12d7d31272` — torna a detecção de áudio por FFprobe estrita: falhas ao iniciar/inspecionar a mídia agora interrompem a exportação com erro explícito, em vez de serem interpretadas silenciosamente como ausência de áudio. Foram adicionados testes unitários para saída com áudio, sem áudio e falha de inspeção.
+- Essas alterações posteriores ainda precisam de uma execução CI concluída. O sucesso anterior não deve ser usado como validação delas.
+- Permanecem pendentes a integração real de títulos/legendas no renderizador, composição de sobreposições, keyframes, e validação manual do instalador em Windows.
