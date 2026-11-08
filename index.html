@@ -3,11 +3,44 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#171717" />
-    <title>Edit Master 0.9.1</title>
+    <meta name="theme-color" content="#101010" />
+    <title>Edit Master 1.0</title>
+    <style>
+      html, body, #root { margin: 0; width: 100%; min-height: 100%; background: #101010; color: #f4f4f4; }
+      #boot-fallback { min-height: 100vh; display: grid; place-items: center; padding: 24px; box-sizing: border-box; font: 14px/1.6 'Segoe UI', Arial, sans-serif; }
+      #boot-fallback > div { width: min(560px, 100%); padding: 26px; border: 1px solid #343434; border-radius: 10px; background: #171717; text-align: center; }
+      #boot-fallback strong { color: #ff922b; letter-spacing: 2px; }
+      #boot-fallback p { color: #aaa; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main id="boot-fallback" role="status">
+        <div><strong>EDIT MASTER</strong><p data-boot-message>Carregando a interface…</p><small>Se esta mensagem permanecer, o aplicativo não conseguiu iniciar a interface.</small></div>
+      </main>
+    </div>
+    <script>
+      (function () {
+        var root = document.getElementById('root');
+        function showBootError(message) {
+          var target = root && root.querySelector('[data-boot-message]');
+          if (target) target.textContent = message;
+        }
+        window.addEventListener('error', function (event) {
+          if (event.target && event.target !== window && event.target.tagName === 'SCRIPT') {
+            showBootError('Falha ao carregar o código da interface. Reinicie o Edit Master e informe este problema ao suporte.');
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', function () {
+          showBootError('Uma operação falhou durante a inicialização. Reinicie o Edit Master e informe este problema ao suporte.');
+        });
+        window.setTimeout(function () {
+          if (root && root.querySelector('#boot-fallback')) {
+            showBootError('A interface não iniciou dentro do tempo esperado. O conteúdo técnico pode ser consultado no log do aplicativo.');
+          }
+        }, 12000);
+      })();
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

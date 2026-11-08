@@ -19,6 +19,7 @@ import YouTubePublish from './YouTubePublish.jsx';
 import HelpCenter from './HelpCenter.jsx';
 import packageJson from '../package.json';
 import { LocalizedTree, translateText } from './i18n.js';
+import { safeStorageGet, safeStorageSet, safeStorageRemove } from './storage.js';
 
 const fmt = (value = 0) => {
   const n = Math.max(0, Math.floor(Number(value) || 0));
@@ -46,7 +47,7 @@ const DEFAULT_PREFERENCES = {
 };
 const readPreferences = () => {
   try {
-    const saved = JSON.parse(localStorage.getItem('edit-master-preferences') || '{}');
+    const saved = JSON.parse(safeStorageGet('edit-master-preferences') || '{}');
     return { ...DEFAULT_PREFERENCES, ...saved, shortcuts: { ...DEFAULT_PREFERENCES.shortcuts, ...(saved.shortcuts || {}) } };
   } catch {
     return { ...DEFAULT_PREFERENCES, shortcuts: { ...DEFAULT_PREFERENCES.shortcuts } };
@@ -72,21 +73,17 @@ function App() {
   const [muted, setMuted] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [notice, setNotice] = useState('Pronto para criar. Importe sua primeira mídia.');
-  const [modal, setModal] = useState(() => localStorage.getItem(LANGUAGE_KEY) ? '' : 'language-welcome');
-  const [language, setLanguage] = useState(() => SUPPORTED_LANGUAGES.includes(localStorage.getItem(LANGUAGE_KEY)) ? localStorage.getItem(LANGUAGE_KEY) : 'pt-BR');
-  const [theme, setTheme] = useState(() => THEME_OPTIONS.includes(localStorage.getItem(THEME_KEY)) ? localStorage.getItem(THEME_KEY) : 'orange');
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem(THEME_KEY, theme);
-  }, [theme]);
+  const [modal, setModal] = useState(() => safeStorageGet(LANGUAGE_KEY) ? '' : 'language-welcome');
+  const [language, setLanguage] = useState(() => SUPPORTED_LANGUAGES.includes(safeStorageGet(LANGUAGE_KEY)) ? safeStorageGet(LANGUAGE_KEY) : 'pt-BR');
+  const [theme, setTheme] = useState(() => THEME_OPTIONS.includes(safeStorageGet(THEME_KEY)) ? safeStorageGet(THEME_KEY) : 'orange');
   const [projectName, setProjectName] = useState('Projeto sem título');
   const [dirty, setDirty] = useState(false);
   const [uninstalling, setUninstalling] = useState(false);
   const [localUpdatePath, setLocalUpdatePath] = useState('');
   const [expectedLocalUpdateSha256, setExpectedLocalUpdateSha256] = useState('');
   const [localUpdateCandidate, setLocalUpdateCandidate] = useState(null);
-  const [localUpdateFolder, setLocalUpdateFolder] = useState(() => localStorage.getItem(LOCAL_UPDATE_FOLDER_KEY) || '');
-  const [autoLocalUpdate, setAutoLocalUpdate] = useState(() => localStorage.getItem(AUTO_LOCAL_UPDATE_KEY) !== 'false');
+  const [localUpdateFolder, setLocalUpdateFolder] = useState(() => safeStorageGet(LOCAL_UPDATE_FOLDER_KEY) || '');
+  const [autoLocalUpdate, setAutoLocalUpdate] = useState(() => safeStorageGet(AUTO_LOCAL_UPDATE_KEY) !== 'false');
   const [updating, setUpdating] = useState(false);
   const [preferences, setPreferences] = useState(readPreferences);
   const [draftPreferences, setDraftPreferences] = useState(readPreferences);
@@ -100,8 +97,8 @@ function App() {
   const [duplicateBusy, setDuplicateBusy] = useState(false);
   const [duplicateFeedback, setDuplicateFeedback] = useState('');
   const [duplicateScanSummary, setDuplicateScanSummary] = useState({ scanned_video_files: 0, skipped_items: 0 });
-  const [ffmpegPath, setFfmpegPath] = useState(() => localStorage.getItem(FFMPEG_PATH_KEY) || '');
-  const [mediaStorageFolder, setMediaStorageFolder] = useState(() => localStorage.getItem(MEDIA_STORAGE_FOLDER_KEY) || '');
+  const [ffmpegPath, setFfmpegPath] = useState(() => safeStorageGet(FFMPEG_PATH_KEY) || '');
+  const [mediaStorageFolder, setMediaStorageFolder] = useState(() => safeStorageGet(MEDIA_STORAGE_FOLDER_KEY) || '');
   const [mediaStorageBusy, setMediaStorageBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [lastExportedPath, setLastExportedPath] = useState('');
@@ -209,11 +206,10 @@ function App() {
   const persistPreferences = (next, successMessage, failureMessage) => {
     setPreferences(next);
     setDraftPreferences(next);
-    try {
-      localStorage.setItem('edit-master-preferences', JSON.stringify(next));
+    if (safeStorageSet('edit-master-preferences', JSON.stringify(next))) {
       setSettingsFeedback(successMessage);
       setNotice(successMessage);
-    } catch {
+    } else {
       setSettingsFeedback(failureMessage);
       setNotice(failureMessage);
     }
@@ -250,7 +246,7 @@ function App() {
       const candidate = await invoke('check_local_update', { folderPath: localUpdateFolder });
       if (candidate) {
         const updateKey = `${candidate.version}:${candidate.sha256}`;
-        const dismissedKey = localStorage.getItem(DISMISSED_LOCAL_UPDATE_KEY);
+        const dismissedKey = safeStorageGet(DISMISSED_LOCAL_UPDATE_KEY);
         if (forcePrompt || dismissedKey !== updateKey) {
           setLocalUpdateCandidate(candidate);
           setLocalUpdatePath(candidate.installerPath);
@@ -274,12 +270,12 @@ function App() {
   useEffect(() => () => objectUrls.current.forEach(url => URL.revokeObjectURL(url)), []);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    try { localStorage.setItem(THEME_KEY, theme); } catch { /* Keep the current session theme. */ }
+    try { safeStorageSet(THEME_KEY, theme); } catch { /* Keep the current session theme. */ }
   }, [theme]);
   const chooseLanguage = (nextLanguage) => {
     if (!SUPPORTED_LANGUAGES.includes(nextLanguage)) return;
     setLanguage(nextLanguage);
-    try { localStorage.setItem(LANGUAGE_KEY, nextLanguage); } catch { /* Keep the current session language. */ }
+    try { safeStorageSet(LANGUAGE_KEY, nextLanguage); } catch { /* Keep the current session language. */ }
     setModal(current => current === 'language-welcome' ? '' : current);
   };
   useEffect(() => {
@@ -291,10 +287,10 @@ function App() {
     let cancelled = false;
     invoke('get_bundled_media_tools').then(tools => {
       if (cancelled || !tools?.ffmpegPath) return;
-      const manuallyConfigured = localStorage.getItem(FFMPEG_PATH_KEY);
+      const manuallyConfigured = safeStorageGet(FFMPEG_PATH_KEY);
       if (!manuallyConfigured) {
         setFfmpegPath(tools.ffmpegPath);
-        localStorage.setItem(FFMPEG_PATH_KEY, tools.ffmpegPath);
+        safeStorageSet(FFMPEG_PATH_KEY, tools.ffmpegPath);
       }
     }).catch(() => {});
     return () => { cancelled = true; };
@@ -359,7 +355,7 @@ function App() {
       });
       if (!selected || Array.isArray(selected)) return;
       setMediaStorageFolder(selected);
-      try { localStorage.setItem(MEDIA_STORAGE_FOLDER_KEY, selected); } catch { /* Keep the current session setting. */ }
+      try { safeStorageSet(MEDIA_STORAGE_FOLDER_KEY, selected); } catch { /* Keep the current session setting. */ }
       setNotice('Pasta de armazenamento de mídia salva. Novos arquivos importados pelo seletor serão copiados para ela.');
     } catch (error) {
       setNotice(`Não foi possível selecionar a pasta de armazenamento: ${String(error)}`);
@@ -830,7 +826,7 @@ function App() {
       const selected = await open({ multiple: false, directory: false, title: translateText('Selecionar ffmpeg.exe', language), filters: [{ name: translateText('FFmpeg (Windows)', language), extensions: ['exe'] }] });
       if (!selected || Array.isArray(selected)) return null;
       setFfmpegPath(selected);
-      localStorage.setItem(FFMPEG_PATH_KEY, selected);
+      safeStorageSet(FFMPEG_PATH_KEY, selected);
       return selected;
     } catch (error) {
       setNotice(`Não foi possível selecionar o FFmpeg: ${String(error)}`);
@@ -1065,9 +1061,9 @@ function App() {
         title: translateText('Escolher pasta de atualizações do Edit Master', language),
       });
       if (!selected) return;
-      localStorage.setItem(LOCAL_UPDATE_FOLDER_KEY, selected);
-      localStorage.setItem(AUTO_LOCAL_UPDATE_KEY, 'true');
-      localStorage.removeItem(DISMISSED_LOCAL_UPDATE_KEY);
+      safeStorageSet(LOCAL_UPDATE_FOLDER_KEY, selected);
+      safeStorageSet(AUTO_LOCAL_UPDATE_KEY, 'true');
+      safeStorageRemove(DISMISSED_LOCAL_UPDATE_KEY);
       setLocalUpdateCandidate(null);
       setLocalUpdatePath('');
       setExpectedLocalUpdateSha256('');
@@ -1079,7 +1075,7 @@ function App() {
     }
   };
   const toggleAutoLocalUpdate = (enabled) => {
-    localStorage.setItem(AUTO_LOCAL_UPDATE_KEY, String(enabled));
+    safeStorageSet(AUTO_LOCAL_UPDATE_KEY, String(enabled));
     setAutoLocalUpdate(enabled);
     setNotice(enabled ? 'Verificação automática da pasta local ativada.' : 'Verificação automática da pasta local pausada.');
   };
@@ -1102,7 +1098,7 @@ function App() {
   };
   const dismissDetectedLocalUpdate = () => {
     if (localUpdateCandidate) {
-      localStorage.setItem(DISMISSED_LOCAL_UPDATE_KEY, `${localUpdateCandidate.version}:${localUpdateCandidate.sha256}`);
+      safeStorageSet(DISMISSED_LOCAL_UPDATE_KEY, `${localUpdateCandidate.version}:${localUpdateCandidate.sha256}`);
     }
     setLocalUpdateCandidate(null);
     setLocalUpdatePath('');

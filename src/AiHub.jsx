@@ -4,6 +4,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
 import { Bot, CheckCircle2, Cpu, FileAudio, FolderOpen, KeyRound, Languages, LoaderCircle, LockKeyhole, Mic2, Sparkles, Trash2, Upload, Wand2 } from 'lucide-react';
 import { parseSrt } from './editing.js';
+import { safeStorageGet, safeStorageSet } from './storage.js';
 
 const PROVIDERS = [
   { id: 'gpt', name: 'GPT', brand: 'OpenAI', icon: Bot, subtitle: 'Transcrição em nuvem', description: 'Gera uma transcrição do áudio e cria legendas SRT.' },
@@ -29,7 +30,7 @@ function makeSrt(cues) {
 }
 
 function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = [], onApplySrt, onClose, setNotice, uiLanguage = 'pt-BR' }) {
-  const [provider, setProvider] = useState(() => localStorage.getItem(PROVIDER_KEY) || 'local');
+  const [provider, setProvider] = useState(() => safeStorageGet(PROVIDER_KEY) || 'local');
   const [task, setTask] = useState('generate');
   const [language, setLanguage] = useState('pt');
   const [targetLanguage, setTargetLanguage] = useState('English');
@@ -38,9 +39,9 @@ function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = []
   const [keyBusy, setKeyBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState('');
-  const [whisperExecutable, setWhisperExecutable] = useState(() => localStorage.getItem(WHISPER_EXE_KEY) || '');
-  const [whisperModel, setWhisperModel] = useState(() => localStorage.getItem(WHISPER_MODEL_KEY) || '');
-  const [ffmpegPath, setFfmpegPath] = useState(() => localStorage.getItem(FFMPEG_KEY) || '');
+  const [whisperExecutable, setWhisperExecutable] = useState(() => safeStorageGet(WHISPER_EXE_KEY) || '');
+  const [whisperModel, setWhisperModel] = useState(() => safeStorageGet(WHISPER_MODEL_KEY) || '');
+  const [ffmpegPath, setFfmpegPath] = useState(() => safeStorageGet(FFMPEG_KEY) || '');
   const [targetId, setTargetId] = useState(selectedMediaId || mediaItems.find(item => item.type === 'video' || item.type === 'audio')?.id || '');
 
   const availableMedia = useMemo(() => mediaItems.filter(item => item.type === 'video' || item.type === 'audio'), [mediaItems]);
@@ -56,24 +57,24 @@ function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = []
     let cancelled = false;
     invoke('get_bundled_media_tools').then(tools => {
       if (cancelled || !tools) return;
-      if (tools.whisperExecutable && !localStorage.getItem(WHISPER_EXE_KEY)) {
+      if (tools.whisperExecutable && !safeStorageGet(WHISPER_EXE_KEY)) {
         setWhisperExecutable(tools.whisperExecutable);
-        localStorage.setItem(WHISPER_EXE_KEY, tools.whisperExecutable);
+        safeStorageSet(WHISPER_EXE_KEY, tools.whisperExecutable);
       }
-      if (tools.whisperModelPath && !localStorage.getItem(WHISPER_MODEL_KEY)) {
+      if (tools.whisperModelPath && !safeStorageGet(WHISPER_MODEL_KEY)) {
         setWhisperModel(tools.whisperModelPath);
-        localStorage.setItem(WHISPER_MODEL_KEY, tools.whisperModelPath);
+        safeStorageSet(WHISPER_MODEL_KEY, tools.whisperModelPath);
       }
-      if (tools.ffmpegPath && !localStorage.getItem(FFMPEG_KEY)) {
+      if (tools.ffmpegPath && !safeStorageGet(FFMPEG_KEY)) {
         setFfmpegPath(tools.ffmpegPath);
-        localStorage.setItem(FFMPEG_KEY, tools.ffmpegPath);
+        safeStorageSet(FFMPEG_KEY, tools.ffmpegPath);
       }
     }).catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(PROVIDER_KEY, provider);
+    safeStorageSet(PROVIDER_KEY, provider);
     setTask(provider === 'claude' ? 'correct' : 'generate');
     setFeedback('');
   }, [provider]);
@@ -96,9 +97,9 @@ function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = []
           : { title: translateText('Selecionar ffmpeg.exe', uiLanguage), filters: [{ name: 'FFmpeg', extensions: ['exe'] }] };
       const selected = await open({ multiple: false, directory: false, ...config });
       if (!selected || Array.isArray(selected)) return;
-      if (kind === 'whisper') { setWhisperExecutable(selected); localStorage.setItem(WHISPER_EXE_KEY, selected); }
-      if (kind === 'model') { setWhisperModel(selected); localStorage.setItem(WHISPER_MODEL_KEY, selected); }
-      if (kind === 'ffmpeg') { setFfmpegPath(selected); localStorage.setItem(FFMPEG_KEY, selected); }
+      if (kind === 'whisper') { setWhisperExecutable(selected); safeStorageSet(WHISPER_EXE_KEY, selected); }
+      if (kind === 'model') { setWhisperModel(selected); safeStorageSet(WHISPER_MODEL_KEY, selected); }
+      if (kind === 'ffmpeg') { setFfmpegPath(selected); safeStorageSet(FFMPEG_KEY, selected); }
       setFeedback('Caminho salvo neste computador.');
     } catch (error) {
       setFeedback(`Não foi possível abrir o seletor: ${String(error)}`);
