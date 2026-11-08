@@ -10,7 +10,8 @@
       #boot-fallback { min-height: 100vh; display: grid; place-items: center; padding: 24px; box-sizing: border-box; font: 14px/1.6 'Segoe UI', Arial, sans-serif; }
       #boot-fallback > div { width: min(560px, 100%); padding: 26px; border: 1px solid #343434; border-radius: 10px; background: #171717; text-align: center; }
       #boot-fallback strong { color: #ff922b; letter-spacing: 2px; }
-      #boot-fallback p { color: #aaa; }
+      #boot-fallback p { color: #aaa; overflow-wrap: anywhere; }
+      #boot-fallback small { color: #ddd; overflow-wrap: anywhere; }
     </style>
   </head>
   <body>
@@ -22,17 +23,32 @@
     <script>
       (function () {
         var root = document.getElementById('root');
-        function showBootError(message) {
+        function showBootError(message, detail) {
           var target = root && root.querySelector('[data-boot-message]');
+          var extra = root && root.querySelector('#boot-error-detail');
           if (target) target.textContent = message;
+          if (detail) {
+            if (!extra && root) {
+              extra = document.createElement('small');
+              extra.id = 'boot-error-detail';
+              var card = root.querySelector('#boot-fallback > div');
+              if (card) card.appendChild(extra);
+            }
+            if (extra) extra.textContent = detail;
+          }
         }
         window.addEventListener('error', function (event) {
           if (event.target && event.target !== window && event.target.tagName === 'SCRIPT') {
-            showBootError('Falha ao carregar o código da interface. Reinicie o Edit Master e informe este problema ao suporte.');
+            var source = event.target.src || event.target.getAttribute('src') || 'origem desconhecida';
+            showBootError('Falha ao carregar um arquivo JavaScript da interface.', 'Arquivo: ' + source);
+          } else if (event.error) {
+            showBootError('Ocorreu um erro durante a inicialização da interface.', String(event.message || event.error).slice(0, 500));
           }
         }, true);
-        window.addEventListener('unhandledrejection', function () {
-          showBootError('Uma operação falhou durante a inicialização. Reinicie o Edit Master e informe este problema ao suporte.');
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event.reason;
+          var detail = reason && reason.message ? reason.message : String(reason || 'motivo não informado');
+          showBootError('Uma operação falhou durante a inicialização.', detail.slice(0, 500));
         });
         window.setTimeout(function () {
           if (root && root.querySelector('#boot-fallback')) {

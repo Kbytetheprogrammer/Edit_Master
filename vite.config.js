@@ -2,6 +2,9 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
+  // Tauri loads the production bundle through its custom app protocol.
+  // Relative asset URLs avoid root-path resolution failures in packaged builds.
+  base: "./",
   plugins: [react()],
   clearScreen: false,
   server: {
