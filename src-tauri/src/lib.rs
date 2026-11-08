@@ -69,6 +69,16 @@ struct MediaDescriptor {
     size_bytes: u64,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct CopiedMediaDescriptor {
+    source_path: String,
+    path: String,
+    name: String,
+    media_type: String,
+    size_bytes: u64,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ProjectMediaInput {
@@ -339,6 +349,80 @@ fn register_media_paths(
         });
     }
     Ok(media)
+}
+
+fn unique_media_destination(folder: &Path, file_name: &str) -> PathBuf {
+    let original = Path::new(file_name);
+    let stem = original.file_stem().and_then(|value| value.to_str()).unwrap_or("media");
+    let extension = original.extension().and_then(|value| value.to_str());
+    let first = folder.join(file_name);
+    if !first.exists() {
+        return first;
+    }
+    for index in 2..=10_000 {
+        let candidate_name = match extension {
+            Some(extension) => format!("{stem} ({index}).{extension}"),
+            None => format!("{stem} ({index})"),
+        };
+        let candidate = folder.join(candidate_name);
+        if !candidate.exists() {
+            return candidate;
+        }
+    }
+    folder.join(format!("{}_{}.{}", stem, Uuid::new_v4(), extension.unwrap_or("bin")))
+}
+
+#[tauri::command]
+fn copy_media_to_folder(
+    app: tauri::AppHandle,
+    paths: Vec<String>,
+    folder_path: String,
+) -> Result<Vec<CopiedMediaDescriptor>, String> {
+    let requested_folder = PathBuf::from(folder_path);
+    fs::create_dir_all(&requested_folder)
+        .map_err(|error| format!("Não foi possível criar a pasta de mídia escolhida: {error}"))?;
+    let folder = requested_folder.canonicalize()
+        .map_err(|error| format!("Não foi possível acessar a pasta de mídia escolhida: {error}"))?;
+    if !folder.is_dir() {
+        return Err("Escolha uma pasta válida para armazenar as mídias.".into());
+    }
+
+    let scope = app.asset_protocol_scope();
+    let mut copied = Vec::new();
+    for raw_path in paths {
+        let source = PathBuf::from(raw_path).canonicalize()
+            .map_err(|error| format!("Não foi possível acessar um dos arquivos selecionados: {error}"))?;
+        if !source.is_file() {
+            continue;
+        }
+        let Some(media_type) = supported_media_type(&source) else {
+            continue;
+        };
+        let file_name = source.file_name().and_then(|value| value.to_str())
+            .ok_or("Não foi possível identificar o nome de um arquivo de mídia.")?;
+        let destination = if source.parent() == Some(folder.as_path()) {
+            source.clone()
+        } else {
+            let target = unique_media_destination(&folder, file_name);
+            fs::copy(&source, &target)
+                .map_err(|error| format!("Não foi possível copiar '{}': {error}", file_name))?;
+            target
+        };
+        scope.allow_file(&destination)
+            .map_err(|error| format!("Não foi possível liberar a prévia de '{}': {error}", file_name))?;
+        let metadata = fs::metadata(&destination)
+            .map_err(|error| format!("Não foi possível ler os detalhes de '{}': {error}", file_name))?;
+        let name = destination.file_name().and_then(|value| value.to_str())
+            .unwrap_or(file_name).to_string();
+        copied.push(CopiedMediaDescriptor {
+            source_path: source.to_string_lossy().into_owned(),
+            path: destination.to_string_lossy().into_owned(),
+            name,
+            media_type: media_type.to_string(),
+            size_bytes: metadata.len(),
+        });
+    }
+    Ok(copied)
 }
 
 #[tauri::command]
@@ -2132,6 +2216,7 @@ pub fn run() {
             scan_duplicate_videos,
             move_duplicate_to_recycle_bin,
             register_media_paths,
+            copy_media_to_folder,
             move_media_to_recycle_bin,
             save_project_bundle,
             load_project_bundle,
