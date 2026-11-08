@@ -1232,6 +1232,23 @@ Object.assign(dictionaries.es, {
   "Não foi possível selecionar a pasta de armazenamento: ": "No se pudo seleccionar la carpeta de almacenamiento: "
 });
 
+Object.assign(dictionaries.en, {
+  "Copiar mídias já importadas": "Copy already imported media",
+  "Transfere as referências da biblioteca atual para cópias na pasta escolhida, sem apagar os arquivos originais. Projetos não salvos devem ser salvos novamente depois.": "Copies the current library media to the selected folder without deleting the original files. Unsaved projects should be saved again afterward.",
+  "Copiar agora": "Copy now",
+  "Copiando…": "Copying…",
+  "Não há arquivos com caminho permanente para copiar. Reimporte os arquivos pelo seletor do Windows.": "There are no files with permanent paths to copy. Reimport them using the Windows file picker.",
+  "Os originais foram preservados.": "The originals were preserved."
+});
+Object.assign(dictionaries.es, {
+  "Copiar mídias já importadas": "Copiar archivos multimedia ya importados",
+  "Transfere as referências da biblioteca atual para cópias na pasta escolhida, sem apagar os arquivos originais. Projetos não salvos devem ser salvos novamente depois.": "Copia los archivos multimedia de la biblioteca actual a la carpeta elegida sin borrar los originales. Los proyectos sin guardar deben guardarse de nuevo después.",
+  "Copiar agora": "Copiar ahora",
+  "Copiando…": "Copiando…",
+  "Não há arquivos com caminho permanente para copiar. Reimporte os arquivos pelo seletor do Windows.": "No hay archivos con rutas permanentes para copiar. Vuelve a importarlos con el selector de Windows.",
+  "Os originais foram preservados.": "Se conservaron los archivos originales."
+});
+
 const attributeNames = new Set([
   'placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'label',
   'description', 'helperText', 'emptyLabel'
