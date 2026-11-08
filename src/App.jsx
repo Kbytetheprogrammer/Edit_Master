@@ -30,6 +30,7 @@ const LOCAL_UPDATE_FOLDER_KEY = 'edit-master-local-update-folder';
 const AUTO_LOCAL_UPDATE_KEY = 'edit-master-auto-local-update';
 const DISMISSED_LOCAL_UPDATE_KEY = 'edit-master-dismissed-local-update';
 const FFMPEG_PATH_KEY = 'edit-master-ffmpeg-path';
+const MEDIA_STORAGE_FOLDER_KEY = 'edit-master-media-storage-folder';
 const LANGUAGE_KEY = 'edit-master-language';
 const THEME_KEY = 'edit-master-theme';
 const SUPPORTED_LANGUAGES = ['pt-BR', 'en', 'es'];
@@ -100,6 +101,7 @@ function App() {
   const [duplicateFeedback, setDuplicateFeedback] = useState('');
   const [duplicateScanSummary, setDuplicateScanSummary] = useState({ scanned_video_files: 0, skipped_items: 0 });
   const [ffmpegPath, setFfmpegPath] = useState(() => localStorage.getItem(FFMPEG_PATH_KEY) || '');
+  const [mediaStorageFolder, setMediaStorageFolder] = useState(() => localStorage.getItem(MEDIA_STORAGE_FOLDER_KEY) || '');
   const [exportBusy, setExportBusy] = useState(false);
   const [lastExportedPath, setLastExportedPath] = useState('');
   const videoRef = useRef(null);
@@ -347,6 +349,22 @@ function App() {
     active?.id, active?.type, previewClip, duration, playing,
   ]);
 
+  const chooseMediaStorageFolder = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: translateText('Escolher pasta para armazenar mídias', language),
+      });
+      if (!selected || Array.isArray(selected)) return;
+      setMediaStorageFolder(selected);
+      try { localStorage.setItem(MEDIA_STORAGE_FOLDER_KEY, selected); } catch { /* Keep the current session setting. */ }
+      setNotice('Pasta de armazenamento de mídia salva. Novos arquivos importados pelo seletor serão copiados para ela.');
+    } catch (error) {
+      setNotice(`Não foi possível selecionar a pasta de armazenamento: ${String(error)}`);
+    }
+  };
+
   const chooseMediaFiles = async () => {
     try {
       const selected = await open({
@@ -357,7 +375,9 @@ function App() {
       });
       if (!selected) return;
       const paths = Array.isArray(selected) ? selected : [selected];
-      const descriptors = await invoke('register_media_paths', { paths });
+      const descriptors = mediaStorageFolder
+        ? await invoke('copy_media_to_folder', { paths, folderPath: mediaStorageFolder })
+        : await invoke('register_media_paths', { paths });
       const added = descriptors.map(item => ({
         id: uid(), name: item.name, type: item.mediaType, size: item.sizeBytes,
         duration: 0, sourcePath: item.path, url: convertFileSrc(item.path),
@@ -368,7 +388,9 @@ function App() {
       setScreen('editor');
       setSelectedClip(null);
       setDirty(true);
-      setNotice(`${added.length} arquivo(s) importado(s). Os arquivos podem ser copiados para a pasta do projeto ao salvar.`);
+      setNotice(mediaStorageFolder
+        ? `${added.length} arquivo(s) importado(s) e copiado(s) para a pasta de armazenamento escolhida.`
+        : `${added.length} arquivo(s) importado(s). Configure uma pasta de armazenamento nas configurações para copiá-los automaticamente para outro disco.`);
     } catch (error) {
       setNotice(`Não foi possível importar a mídia: ${String(error)}`);
     }
@@ -1239,6 +1261,9 @@ function App() {
       <div className="settings-row"><div><b>Reproduzir / pausar</b><p>Atalho para controlar o monitor de pré-visualização.</p></div><select className="settings-select" value={draftPreferences.shortcuts?.play || 'Space'} onChange={e=>{setSettingsFeedback('');setDraftPreferences(v=>({...v,shortcuts:{...DEFAULT_PREFERENCES.shortcuts,...(v.shortcuts||{}),play:e.target.value}}));}}><option value="Space">Espaço</option><option value="k">K</option></select></div>
       <div className="settings-footnote">As alterações ficam em rascunho até você clicar em Aplicar. O orçamento de cache é uma preferência reservada para o futuro mecanismo de miniaturas/pré-visualizações; ainda não limita a RAM total do processo. Vulkan/OpenGL dependem da integração futura de um motor de vídeo compatível.</div>
       <div className="settings-actions"><div className={`settings-feedback ${preferencesChanged ? 'pending' : 'applied'}`} role="status" aria-live="polite"><i/>{settingsFeedback || (preferencesChanged ? 'Há alterações aguardando aplicação.' : 'Configurações aplicadas')}</div><div className="settings-action-buttons"><button className="subtle-button settings-reset" onClick={resetPreferences}>Restaurar padrão</button><button className="export-button settings-apply" onClick={applyPreferences} disabled={!preferencesChanged}>Aplicar alterações</button></div></div>
+      <div className="settings-section-title settings-section-spaced"><FolderOpen size={15}/><span>Armazenamento de mídia</span></div>
+      <div className="settings-row"><div><b>Pasta para vídeos, imagens e áudios</b><p>{mediaStorageFolder || 'Nenhuma pasta escolhida. Você pode manter o aplicativo no SSD e guardar as mídias em outro disco, como um HD.'}</p></div><button className="subtle-button" onClick={chooseMediaStorageFolder}>{mediaStorageFolder?'Alterar pasta':'Escolher pasta'}</button></div>
+      <div className="settings-row"><div><b>Como funciona</b><p>Quando uma pasta estiver configurada, os próximos arquivos importados pelo botão Importar serão copiados para ela. Os originais serão preservados. Arquivos com nomes repetidos receberão um sufixo para evitar sobrescrita. A pasta pode ficar em outro disco, por exemplo D:\\EditMaster-Midia.</p></div><span className="settings-tag">{mediaStorageFolder?'Ativo':'Não configurado'}</span></div>
       <div className="settings-section-title settings-section-spaced"><Settings2 size={15}/><span>Aplicativo</span></div>
       <div className="settings-row"><div><b>Verificar atualizações online</b><p>A verificação online ainda depende da publicação oficial e da configuração das chaves de assinatura.</p></div><button className="subtle-button" onClick={checkUpdates}>Verificar</button></div>
       <div className="settings-row"><div><b>Pasta de atualizações locais</b><p>{localUpdateFolder || 'Nenhuma pasta configurada. Escolha uma pasta que contenha o instalador e edit-master-update.json.'}</p></div><button className="subtle-button" onClick={chooseLocalUpdateFolder}>{localUpdateFolder?'Alterar pasta':'Escolher pasta'}</button></div>
