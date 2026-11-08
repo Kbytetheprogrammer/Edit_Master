@@ -1185,6 +1185,12 @@ Object.assign(dictionaries.es, {
   "Não foi possível iniciar FFmpeg: {error}":"No se pudo iniciar FFmpeg: {error}"
 });
 
+Object.assign(dictionaries.en, {
+  'Pasta analisada:':'Scanned folder:','Por':'By',' e ':' and ','Espaço':'Space'
+});
+Object.assign(dictionaries.es, {
+  'Pasta analisada:':'Carpeta analizada:','Por':'Por',' e ':' y ','Espaço':'Espacio'
+});
 const attributeNames = new Set([
   'placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'label',
   'description', 'helperText', 'emptyLabel'
