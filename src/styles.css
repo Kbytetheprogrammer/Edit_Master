@@ -57,10 +57,9 @@ button:focus-visible,
 }
 .settings-actions {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
   padding: 14px 0 4px;
   margin-top: 8px;
   border-top: 1px solid #333;
@@ -93,6 +92,7 @@ button:focus-visible,
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  align-self: flex-end;
   flex-wrap: wrap;
   gap: 8px;
 }
