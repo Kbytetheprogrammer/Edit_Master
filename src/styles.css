@@ -1343,3 +1343,10 @@ html[data-theme="mixed"] input[type="range"], html[data-theme="mixed"] .settings
 .media-trash-button:disabled{opacity:.35;cursor:wait}
 .media-item:hover .media-trash-button,.media-item.chosen .media-trash-button{opacity:1}
 .media-item .media-meta{flex:1;min-width:0}
+
+.diagnostics-body{gap:10px;max-height:min(72vh,760px);overflow:auto}
+.diagnostics-intro,.diagnostics-privacy,.diagnostics-shortcut{font-size:10px;line-height:1.55;color:#aaa;margin:0}
+.diagnostics-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.diagnostics-report{width:100%;min-height:280px;max-height:48vh;resize:vertical;padding:11px;border:1px solid #343434;border-radius:6px;background:#0d0d0d;color:#d5d5d5;font:10px/1.5 Consolas,'Courier New',monospace;white-space:pre;tab-size:2}
+.diagnostics-error{margin:0;color:#ffad87;font-size:10px}
+.diagnostics-shortcut{padding-top:9px;border-top:1px solid #303030}
