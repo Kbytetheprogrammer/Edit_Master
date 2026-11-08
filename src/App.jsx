@@ -72,6 +72,10 @@ function App() {
   const [modal, setModal] = useState(() => localStorage.getItem(LANGUAGE_KEY) ? '' : 'language-welcome');
   const [language, setLanguage] = useState(() => SUPPORTED_LANGUAGES.includes(localStorage.getItem(LANGUAGE_KEY)) ? localStorage.getItem(LANGUAGE_KEY) : 'pt-BR');
   const [theme, setTheme] = useState(() => THEME_OPTIONS.includes(localStorage.getItem(THEME_KEY)) ? localStorage.getItem(THEME_KEY) : 'orange');
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
   const [projectName, setProjectName] = useState('Projeto sem título');
   const [dirty, setDirty] = useState(false);
   const [uninstalling, setUninstalling] = useState(false);
