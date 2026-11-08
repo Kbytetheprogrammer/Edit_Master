@@ -38,6 +38,9 @@
       "icons/icon-m-32.png",
       "icons/icon-m-128.png",
       "icons/icon-m-256.png"
+    ],
+    "resources": [
+      "resources/**/*"
     ]
   }
 }
