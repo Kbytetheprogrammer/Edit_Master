@@ -6,6 +6,7 @@ test('translates core editor and media-storage labels into English', () => {
   assert.equal(translateText('Armazenamento de mídia', 'en'), 'Media storage');
   assert.equal(translateText('Copiar mídias já importadas', 'en'), 'Copy already imported media');
   assert.equal(translateText('Procurar vídeos duplicados', 'en'), 'Find duplicate videos');
+  assert.equal(translateText('Volume e silêncio afetam a prévia e a exportação. Fade-in e fade-out são aplicados na exportação MP4.', 'en'), 'Volume and mute affect the preview and export. Fade-in and fade-out are applied to the exported MP4.');
   assert.equal(translateText('Enviar para o YouTube', 'en'), 'Upload to YouTube');
 });
 
@@ -13,6 +14,7 @@ test('translates core editor and media-storage labels into Spanish', () => {
   assert.equal(translateText('Armazenamento de mídia', 'es'), 'Almacenamiento multimedia');
   assert.equal(translateText('Copiar mídias já importadas', 'es'), 'Copiar archivos multimedia ya importados');
   assert.equal(translateText('Procurar vídeos duplicados', 'es'), 'Buscar vídeos duplicados');
+  assert.equal(translateText('Volume e silêncio afetam a prévia e a exportação. Fade-in e fade-out são aplicados na exportação MP4.', 'es'), 'El volumen y el silencio afectan a la vista previa y a la exportación. Los fundidos de entrada y salida se aplican al MP4 exportado.');
   assert.equal(translateText('Enviar para o YouTube', 'es'), 'Enviar a YouTube');
 });
 
