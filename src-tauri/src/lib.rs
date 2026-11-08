@@ -2039,6 +2039,29 @@ fn ffprobe_has_audio(ffmpeg_path: &Path, media_path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+fn ffprobe_media_duration(ffmpeg_path: &Path, media_path: &Path) -> Result<f64, String> {
+    let probe_name = if cfg!(target_os = "windows") { "ffprobe.exe" } else { "ffprobe" };
+    let probe = ffmpeg_path.parent()
+        .map(|parent| parent.join(probe_name))
+        .filter(|candidate| candidate.is_file())
+        .unwrap_or_else(|| PathBuf::from(probe_name));
+    let output = Command::new(&probe)
+        .args(["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1"])
+        .arg(media_path)
+        .output()
+        .map_err(|error| format!("Não foi possível verificar o MP4 gerado com FFprobe: {error}"))?;
+    if !output.status.success() {
+        return Err(format!("FFprobe não conseguiu validar o MP4 gerado: {}", String::from_utf8_lossy(&output.stderr).chars().take(500).collect::<String>()));
+    }
+    let raw = String::from_utf8_lossy(&output.stdout);
+    let duration = raw.trim().parse::<f64>()
+        .map_err(|_| "O arquivo exportado não informou uma duração válida.".to_string())?;
+    if !duration.is_finite() || duration <= 0.0 {
+        return Err("O MP4 gerado está vazio ou possui duração inválida.".into());
+    }
+    Ok(duration)
+}
+
 fn atempo_chain(speed: f64) -> String {
     let mut remaining = speed.clamp(0.25, 2.0);
     let mut filters = Vec::new();
@@ -2188,7 +2211,17 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         let details = String::from_utf8_lossy(&result.stderr);
         return Err(format!("A exportação MP4 falhou: {}", details.chars().take(1200).collect::<String>()));
     }
-    Ok(ExportResult { output_path: output.to_string_lossy().into_owned(), duration_seconds: total_duration, video_segments: main_clips.len(), audio_segments: audio_paths.len() })
+    let output_metadata = fs::metadata(&output)
+        .map_err(|error| format!("O FFmpeg terminou, mas o arquivo MP4 não foi encontrado: {error}"))?;
+    if output_metadata.len() < 1024 {
+        return Err("O arquivo MP4 gerado está vazio ou incompleto.".into());
+    }
+    let verified_duration = ffprobe_media_duration(&ffmpeg, &output)?;
+    let duration_tolerance = (total_duration * 0.02).max(0.5);
+    if (verified_duration - total_duration).abs() > duration_tolerance {
+        return Err(format!("O MP4 foi gerado, mas a duração ({verified_duration:.2}s) diverge da timeline ({total_duration:.2}s). Verifique os clipes antes de considerar a exportação concluída."));
+    }
+    Ok(ExportResult { output_path: output.to_string_lossy().into_owned(), duration_seconds: verified_duration, video_segments: main_clips.len(), audio_segments: audio_paths.len() })
 }
 
 #[tauri::command]
