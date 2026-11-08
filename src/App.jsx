@@ -776,8 +776,10 @@ function App() {
 
   const addDownloadedStockMedia = async (downloaded) => {
     if (!downloaded?.path || !downloaded?.mediaType) throw new Error('O Media Hub não retornou um arquivo válido.');
-    // Register the downloaded asset with Tauri's allow-list before creating its file:// preview URL.
-    const [registered] = await invoke('register_media_paths', { paths: [downloaded.path] });
+    // Stock downloads follow the same optional external media storage preference as local imports.
+    const [registered] = mediaStorageFolder
+      ? await invoke('copy_media_to_folder', { paths: [downloaded.path], folderPath: mediaStorageFolder })
+      : await invoke('register_media_paths', { paths: [downloaded.path] });
     if (!registered?.path) throw new Error('O arquivo foi baixado, mas o Edit Master não conseguiu liberar a prévia da mídia.');
     const item = {
       id: uid(), name: registered.name || downloaded.name, type: registered.mediaType || downloaded.mediaType, size: Number(registered.sizeBytes ?? downloaded.sizeBytes) || 0,
