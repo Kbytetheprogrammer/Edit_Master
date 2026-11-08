@@ -102,6 +102,7 @@ function App() {
   const [duplicateScanSummary, setDuplicateScanSummary] = useState({ scanned_video_files: 0, skipped_items: 0 });
   const [ffmpegPath, setFfmpegPath] = useState(() => localStorage.getItem(FFMPEG_PATH_KEY) || '');
   const [mediaStorageFolder, setMediaStorageFolder] = useState(() => localStorage.getItem(MEDIA_STORAGE_FOLDER_KEY) || '');
+  const [mediaStorageBusy, setMediaStorageBusy] = useState(false);
   const [exportBusy, setExportBusy] = useState(false);
   const [lastExportedPath, setLastExportedPath] = useState('');
   const videoRef = useRef(null);
@@ -362,6 +363,35 @@ function App() {
       setNotice('Pasta de armazenamento de mídia salva. Novos arquivos importados pelo seletor serão copiados para ela.');
     } catch (error) {
       setNotice(`Não foi possível selecionar a pasta de armazenamento: ${String(error)}`);
+    }
+  };
+
+  const copyCurrentMediaToStorage = async () => {
+    if (!mediaStorageFolder || mediaStorageBusy) return;
+    const sourcePaths = [...new Set(media.map(item => item.sourcePath).filter(Boolean))];
+    if (!sourcePaths.length) {
+      setNotice('Não há arquivos com caminho permanente para copiar. Reimporte os arquivos pelo seletor do Windows.');
+      return;
+    }
+    setMediaStorageBusy(true);
+    try {
+      const copied = await invoke('copy_media_to_folder', { paths: sourcePaths, folderPath: mediaStorageFolder });
+      const pathsBySource = new Map(copied.map(item => [item.sourcePath, item.path]));
+      setMedia(current => current.map(item => {
+        const nextPath = pathsBySource.get(item.sourcePath);
+        return nextPath ? { ...item, sourcePath: nextPath, url: convertFileSrc(nextPath) } : item;
+      }));
+      setClips(current => current.map(clip => {
+        const sourcePath = media.find(item => item.id === clip.mediaId)?.sourcePath;
+        const nextPath = sourcePath ? pathsBySource.get(sourcePath) : null;
+        return nextPath ? { ...clip, sourcePath: nextPath, url: convertFileSrc(nextPath) } : clip;
+      }));
+      setDirty(true);
+      setNotice(`${copied.length} arquivo(s) copiado(s) para a pasta de armazenamento. Os originais foram preservados.`);
+    } catch (error) {
+      setNotice(`Não foi possível copiar a biblioteca para o disco escolhido: ${String(error)}`);
+    } finally {
+      setMediaStorageBusy(false);
     }
   };
 
@@ -1266,6 +1296,7 @@ function App() {
       <div className="settings-section-title settings-section-spaced"><FolderOpen size={15}/><span>Armazenamento de mídia</span></div>
       <div className="settings-row"><div><b>Pasta para vídeos, imagens e áudios</b><p>{mediaStorageFolder || 'Nenhuma pasta escolhida. Você pode manter o aplicativo no SSD e guardar as mídias em outro disco, como um HD.'}</p></div><button className="subtle-button" onClick={chooseMediaStorageFolder}>{mediaStorageFolder?'Alterar pasta':'Escolher pasta'}</button></div>
       <div className="settings-row"><div><b>Como funciona</b><p>Quando uma pasta estiver configurada, os próximos arquivos importados pelo botão Importar serão copiados para ela. Os originais serão preservados. Arquivos com nomes repetidos receberão um sufixo para evitar sobrescrita. A pasta pode ficar em outro disco, por exemplo D:\\EditMaster-Midia.</p></div><span className="settings-tag">{mediaStorageFolder?'Ativo':'Não configurado'}</span></div>
+      <div className="settings-row"><div><b>Copiar mídias já importadas</b><p>Transfere as referências da biblioteca atual para cópias na pasta escolhida, sem apagar os arquivos originais. Projetos não salvos devem ser salvos novamente depois.</p></div><button className="subtle-button" onClick={copyCurrentMediaToStorage} disabled={!mediaStorageFolder || mediaStorageBusy || !media.some(item=>item.sourcePath)}>{mediaStorageBusy?'Copiando…':'Copiar agora'}</button></div>
       <div className="settings-section-title settings-section-spaced"><Settings2 size={15}/><span>Aplicativo</span></div>
       <div className="settings-row"><div><b>Verificar atualizações online</b><p>A verificação online ainda depende da publicação oficial e da configuração das chaves de assinatura.</p></div><button className="subtle-button" onClick={checkUpdates}>Verificar</button></div>
       <div className="settings-row"><div><b>Pasta de atualizações locais</b><p>{localUpdateFolder || 'Nenhuma pasta configurada. Escolha uma pasta que contenha o instalador e edit-master-update.json.'}</p></div><button className="subtle-button" onClick={chooseLocalUpdateFolder}>{localUpdateFolder?'Alterar pasta':'Escolher pasta'}</button></div>
