@@ -1208,7 +1208,7 @@ function App() {
               <label>Contraste · {Math.round(selectedClipData.colorContrast ?? 100)}%</label><input {...propertyEditHandlers} type="range" min="50" max="150" value={selectedClipData.colorContrast ?? 100} onChange={e=>updateSelectedClipProperties({colorContrast:Number(e.target.value)})}/>
               <label>Saturação · {Math.round(selectedClipData.colorSaturation ?? 100)}%</label><input {...propertyEditHandlers} type="range" min="0" max="200" value={selectedClipData.colorSaturation ?? 100} onChange={e=>updateSelectedClipProperties({colorSaturation:Number(e.target.value)})}/>
               <label>Temperatura quente · {Math.round(selectedClipData.colorWarmth ?? 0)}%</label><input {...propertyEditHandlers} type="range" min="0" max="100" value={selectedClipData.colorWarmth ?? 0} onChange={e=>updateSelectedClipProperties({colorWarmth:Number(e.target.value)})}/>
-              <p className="inspector-note">Correções de cor e velocidade são aplicadas na prévia e salvas no projeto. O MP4 final dependerá do motor de renderização da versão 0.8.</p>
+              <p className="inspector-note">Correções de cor e velocidade são aplicadas na prévia e salvas no projeto. A exportação MP4 atual aplica apenas parte dos efeitos disponíveis.</p>
             </>}
             <button className="danger-button" onClick={()=>removeClip(selectedClipData.clipId)}><Trash2 size={14}/> Remover da timeline</button>
           </div>}
