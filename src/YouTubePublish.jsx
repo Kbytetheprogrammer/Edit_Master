@@ -82,7 +82,7 @@ function YouTubePublish({ initialVideoPath = '', onClose, setNotice, uiLanguage 
     </section>
     <section className="youtube-section">
       <div className="youtube-section-head"><b><Upload size={15}/> Arquivo e detalhes</b></div>
-      <div className="youtube-file-row"><span title={videoPath}>{videoPath || 'Nenhum MP4 selecionado'}</span><button className="subtle-button" onClick={chooseVideo}>Selecionar MP4</button></div>
+      <div className="youtube-file-row"><span translate={videoPath ? "no" : undefined} title={videoPath}>{videoPath || 'Nenhum MP4 selecionado'}</span><button className="subtle-button" onClick={chooseVideo}>Selecionar MP4</button></div>
       <label className="ai-field-label">Título (até 100 caracteres)</label><input className="ai-text-input" maxLength={100} value={title} onChange={event => setTitle(event.target.value)} placeholder="Título do vídeo"/>
       <label className="ai-field-label">Descrição</label><textarea className="ai-textarea" maxLength={5000} rows={4} value={description} onChange={event => setDescription(event.target.value)} placeholder="Descrição do vídeo"/>
       <label className="ai-field-label">Tags (separadas por vírgula)</label><input className="ai-text-input" value={tags} onChange={event => setTags(event.target.value)} placeholder="edição, tutorial, Edit Master"/>
