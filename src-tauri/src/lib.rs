@@ -2030,13 +2030,30 @@ fn upload_video_to_youtube_blocking(_file_path: String, _title: String, _descrip
     Err("O envio para o YouTube está habilitado no Windows nesta versão.".into())
 }
 
-fn ffprobe_has_audio(ffmpeg_path: &Path, media_path: &Path) -> bool {
+fn probe_audio_result(success: bool, stdout: &str, stderr: &str) -> Result<bool, String> {
+    if !success {
+        return Err(format!(
+            "FFprobe não conseguiu identificar o áudio da mídia: {}",
+            stderr.chars().take(500).collect::<String>()
+        ));
+    }
+    Ok(!stdout.trim().is_empty())
+}
+
+fn ffprobe_has_audio(ffmpeg_path: &Path, media_path: &Path) -> Result<bool, String> {
     let probe_name = if cfg!(target_os = "windows") { "ffprobe.exe" } else { "ffprobe" };
     let probe_candidate = ffmpeg_path.parent().map(|parent| parent.join(probe_name)).filter(|candidate| candidate.is_file());
     let probe = probe_candidate.unwrap_or_else(|| PathBuf::from(if cfg!(target_os = "windows") { "ffprobe.exe" } else { "ffprobe" }));
-    Command::new(probe).args(["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_type", "-of", "csv=p=0"]).arg(media_path).output()
-        .map(|output| output.status.success() && !String::from_utf8_lossy(&output.stdout).trim().is_empty())
-        .unwrap_or(false)
+    let output = Command::new(probe)
+        .args(["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_type", "-of", "csv=p=0"])
+        .arg(media_path)
+        .output()
+        .map_err(|error| format!("Não foi possível iniciar FFprobe para verificar o áudio: {error}"))?;
+    probe_audio_result(
+        output.status.success(),
+        &String::from_utf8_lossy(&output.stdout),
+        &String::from_utf8_lossy(&output.stderr),
+    )
 }
 
 fn ffprobe_media_duration(ffmpeg_path: &Path, media_path: &Path) -> Result<f64, String> {
@@ -2100,7 +2117,7 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         if !path.is_file() { return Err(format!("Mídia '{}' não é um arquivo válido.", path.display())); }
         let duration = (clip.end - clip.start).max(0.0).min(clip.duration.max(0.0));
         if !duration.is_finite() || duration <= 0.05 { return Err(format!("O segmento '{}' tem duração inválida.", path.display())); }
-        let has_audio = clip.media_type == "video" && !clip.audio_muted.unwrap_or(false) && ffprobe_has_audio(&ffmpeg, &path);
+        let has_audio = if clip.media_type == "video" && !clip.audio_muted.unwrap_or(false) { ffprobe_has_audio(&ffmpeg, &path)? } else { false };
         let speed = if clip.media_type == "image" { 1.0 } else { clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0) };
         source_durations.push(duration);
         render_durations.push(duration / speed);
@@ -2375,5 +2392,28 @@ mod media_storage_tests {
         );
 
         fs::remove_dir_all(folder).expect("test folder should be removed");
+    }
+}
+
+
+#[cfg(test)]
+mod ffprobe_audio_detection_tests {
+    use super::probe_audio_result;
+
+    #[test]
+    fn recognizes_audio_stream_output() {
+        assert_eq!(probe_audio_result(true, "audio\n", "").unwrap(), true);
+    }
+
+    #[test]
+    fn recognizes_video_without_audio_as_valid() {
+        assert_eq!(probe_audio_result(true, "", "").unwrap(), false);
+    }
+
+    #[test]
+    fn does_not_silently_treat_probe_failure_as_missing_audio() {
+        let error = probe_audio_result(false, "", "Invalid data found").unwrap_err();
+        assert!(error.contains("FFprobe"));
+        assert!(error.contains("Invalid data found"));
     }
 }
