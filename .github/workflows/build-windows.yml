@@ -78,10 +78,32 @@ jobs:
       - name: Build the NSIS installer
         run: npm run tauri:build
 
+      - name: Validate packaged frontend and installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $index = Join-Path $env:GITHUB_WORKSPACE "dist/index.html"
+          if (-not (Test-Path $index)) { throw "Frontend build did not produce dist/index.html." }
+          $html = Get-Content $index -Raw
+          $assets = [regex]::Matches($html, '(?:src|href)="([^"]+)"') | ForEach-Object { $_.Groups[1].Value }
+          Write-Host "=== Production frontend entry ==="
+          Write-Host $html
+          foreach ($asset in $assets) {
+            if ($asset -match '^(https?:|data:|#)') { continue }
+            $relative = $asset.TrimStart('./').Replace('/', [IO.Path]::DirectorySeparatorChar)
+            $assetPath = Join-Path (Split-Path $index) $relative
+            if (-not (Test-Path $assetPath)) { throw "Frontend asset referenced by index.html is missing: $asset -> $assetPath" }
+            Write-Host "Verified frontend asset: $asset"
+          }
+          $installer = Get-ChildItem "src-tauri/target/release/bundle/nsis" -Filter "*-setup.exe" | Select-Object -First 1
+          if (-not $installer) { throw "NSIS installer was not generated." }
+          Write-Host "Installer: $($installer.FullName)"
+          Write-Host "Installer size: $($installer.Length) bytes"
+
       - name: Upload Windows installer
         uses: actions/upload-artifact@v7
         with:
           name: Edit-Master-Windows-Setup
           path: src-tauri/target/release/bundle/nsis/*-setup.exe
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
