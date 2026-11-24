@@ -1,6 +1,6 @@
 [package]
 name = "edit-master"
-version = "0.9.1"
+version = "1.0.0"
 description = "Edit Master video editor"
 authors = ["Edit Master"]
 edition = "2021"
