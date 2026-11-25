@@ -6,6 +6,7 @@ on:
       - main
       - v1.0-development
       - v1.0-rebuild
+      - v1.0-beta-integrated
   workflow_dispatch:
 
 permissions:
