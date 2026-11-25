@@ -47,7 +47,6 @@
         "installerIcon": "icons/icon-m.ico",
         "uninstallerIcon": "icons/icon-m.ico",
         "headerImage": "nsis/header.bmp",
-        "sidebarImage": "nsis/sidebar.bmp",
         "installerHooks": "nsis/installer-hooks.nsh",
         "startMenuFolder": "Edit Master",
         "displayLanguageSelector": true,
