@@ -1507,11 +1507,6 @@ fn build_export_subtitle_srt(
     srt
 }
 
-fn escape_filter_path(path: &Path) -> String {
-    path.to_string_lossy()
-        .replace('\\', "/")
-        .replace('\'', "\\'")
-}
 
 fn warmth_color_matrix(value: f64) -> [f64; 9] {
     let warmth = value.clamp(0.0, 100.0) / 100.0 * 0.45;
@@ -2176,12 +2171,21 @@ fn atempo_chain(speed: f64) -> String {
 fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResult, String> {
     let ffmpeg = PathBuf::from(&request.ffmpeg_path);
     if !ffmpeg.is_file() { return Err("Selecione um ffmpeg.exe válido nas configurações de exportação.".into()); }
+    let ffmpeg = ffmpeg.canonicalize()
+        .map_err(|error| format!("Não foi possível acessar o FFmpeg selecionado: {error}"))?; }
     let width = request.width.clamp(640, 3840) / 2 * 2;
     let height = request.height.clamp(360, 2160) / 2 * 2;
     let fps = request.fps.clamp(24, 60);
     let crf = request.crf.clamp(16, 30);
-    let output = PathBuf::from(&request.output_path);
-    if output.extension().and_then(|v| v.to_str()).map(|v| !v.eq_ignore_ascii_case("mp4")).unwrap_or(true) { return Err("O arquivo de saída deve terminar em .mp4.".into()); }
+    let requested_output = PathBuf::from(&request.output_path);
+    if requested_output.extension().and_then(|v| v.to_str()).map(|v| !v.eq_ignore_ascii_case("mp4")).unwrap_or(true) { return Err("O arquivo de saída deve terminar em .mp4.".into()); }
+    let output = if requested_output.is_absolute() {
+        requested_output
+    } else {
+        std::env::current_dir()
+            .map_err(|error| format!("Não foi possível identificar a pasta atual: {error}"))?
+            .join(requested_output)
+    };
     if let Some(parent) = output.parent() { fs::create_dir_all(parent).map_err(|error| error.to_string())?; }
     let media_map = request.media.iter().map(|media| (media.id.as_str(), PathBuf::from(&media.source_path))).collect::<HashMap<_, _>>();
     let main_clips = request.clips.iter().filter(|clip| clip.media_type == "video" || clip.media_type == "image").collect::<Vec<_>>();
@@ -2220,6 +2224,9 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
     }
 
     let mut command = Command::new(&ffmpeg);
+    // Run from the temp folder so the generated SRT can be referenced by its
+    // safe ASCII filename, independent of apostrophes or accents in the user path.
+    command.current_dir(std::env::temp_dir());
     command.args(["-y", "-hide_banner", "-loglevel", "error"]);
     for (index, clip) in main_clips.iter().enumerate() {
         if clip.media_type == "image" {
@@ -2324,10 +2331,12 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
             let _ = fs::remove_file(&path);
             return Err(format!("Não foi possível preparar as legendas para exportação: {error}"));
         }
-        let escaped_path = escape_filter_path(&path);
+        let filename = path.file_name()
+            .and_then(|name| name.to_str())
+            .ok_or("Não foi possível preparar o nome temporário das legendas.")?;
         filters.push(format!(
             "[vbase]subtitles=filename='{}':force_style='FontName=Arial,FontSize=24,Outline=2,Shadow=1,Alignment=2,MarginV=32'[vout]",
-            escaped_path
+            filename
         ));
         Some(path)
     };
