@@ -1,4 +1,5 @@
 import React from 'react';
+import { withLocalization } from './i18n.js';
 
 const lessons = [
   {

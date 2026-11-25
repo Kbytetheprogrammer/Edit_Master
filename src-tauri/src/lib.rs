@@ -2184,7 +2184,21 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         let brightness = ((clip.color_brightness.unwrap_or(100.0).clamp(50.0, 150.0) - 100.0) / 100.0).clamp(-0.5, 0.5);
         let contrast = (clip.color_contrast.unwrap_or(100.0).clamp(50.0, 150.0) / 100.0).clamp(0.5, 1.5);
         let saturation = (clip.color_saturation.unwrap_or(100.0).clamp(0.0, 200.0) / 100.0).clamp(0.0, 2.0);
-        filters.push(format!("[{index}:v:0]setpts=PTS/{speed:.4},fps={fps},scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,eq=brightness={brightness:.4}:contrast={contrast:.4}:saturation={saturation:.4},format=yuv420p[v{index}]"));
+        let overlay_x = clip.overlay_x.unwrap_or(50.0).clamp(0.0, 100.0);
+        let overlay_y = clip.overlay_y.unwrap_or(50.0).clamp(0.0, 100.0);
+        let overlay_scale = (clip.overlay_scale.unwrap_or(100.0).clamp(10.0, 300.0) / 100.0).clamp(0.1, 3.0);
+        let overlay_opacity = (clip.overlay_opacity.unwrap_or(100.0).clamp(0.0, 100.0) / 100.0).clamp(0.0, 1.0);
+        let overlay_rotation = clip.overlay_rotation.unwrap_or(0.0).clamp(-3600.0, 3600.0);
+        let offset_x = (overlay_x - 50.0) * 1.2;
+        let offset_y = (overlay_y - 50.0) * 1.2;
+        filters.push(format!(
+            "[{index}:v:0]setpts=PTS/{speed:.4},fps={fps},scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,eq=brightness={brightness:.4}:contrast={contrast:.4}:saturation={saturation:.4},format=rgba,scale=iw*{overlay_scale:.4}:ih*{overlay_scale:.4},rotate={:.6}:c=black@0:ow=rotw(iw):oh=roth(ih),colorchannelmixer=aa={overlay_opacity:.4}[fg{index}]",
+            overlay_rotation.to_radians()
+        ));
+        filters.push(format!("color=c=black:s={width}x{height}:r={fps}:d={:.4},format=rgba[bg{index}]", render_durations[index]));
+        filters.push(format!(
+            "[bg{index}][fg{index}]overlay=x=(W-w)/2+W*{offset_x:.4}/100:y=(H-h)/2+H*{offset_y:.4}/100:shortest=1:format=auto,format=yuv420p[v{index}]"
+        ));
         video_labels.push(format!("[v{index}]"));
         let audio_index = audio_input_indices[index];
         let gain = if clip.audio_muted.unwrap_or(false) { 0.0 } else { clip.audio_gain.unwrap_or(1.0).clamp(0.0, 2.0) };
