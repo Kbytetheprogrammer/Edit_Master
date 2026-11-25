@@ -146,7 +146,7 @@ function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = []
           targetLanguage,
         });
       } else if (provider === 'local') {
-        if (!whisperExecutable || !whisperModel) throw new Error('Os componentes Whisper não foram encontrados no instalador. Reinstale o Edit Master ou selecione whisper-cli.exe e o modelo Whisper .bin manualmente.');
+        if (!whisperExecutable || !whisperModel) throw new Error('Os componentes Whisper não estão instalados. Selecione whisper-cli.exe e o modelo Whisper .bin manualmente ou instale-os com o pacote opcional.');
         srtText = await invoke('transcribe_local_whisper', {
           mediaPath: targetMedia.sourcePath,
           mediaType: targetMedia.type,
@@ -192,7 +192,7 @@ function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = []
       <div className="ai-section-title"><Cpu size={15}/> <b>Modelo local Whisper.cpp</b><span className="ai-key-status connected">Offline</span></div>
       <div className="ai-path-row"><div><b>Executável whisper-cli.exe</b><small>{whisperExecutable || 'Detectando Whisper incluído no instalador…'}</small></div><button className="subtle-button" onClick={() => selectPath('whisper')}>Selecionar</button></div>
       <div className="ai-path-row"><div><b>Modelo de reconhecimento (.bin)</b><small>{whisperModel || 'Detectando modelo Tiny incluído no instalador…'}</small></div><button className="subtle-button" onClick={() => selectPath('model')}>Selecionar</button></div>
-      <div className="ai-path-row"><div><b>FFmpeg (opcional para áudio; necessário para vídeo)</b><small>{ffmpegPath || 'FFmpeg incluído no instalador será detectado automaticamente'}</small></div><button className="subtle-button" onClick={() => selectPath('ffmpeg')}>Selecionar</button></div>
+      <div className="ai-path-row"><div><b>FFmpeg (opcional para áudio; necessário para vídeo)</b><small>{ffmpegPath || 'FFmpeg instalado pelo setup será detectado automaticamente'}</small></div><button className="subtle-button" onClick={() => selectPath('ffmpeg')}>Selecionar</button></div>
     </section>}
     <section className="ai-config-section">
       <div className="ai-section-title"><FileAudio size={15}/> <b>Mídia e tarefa</b></div>
