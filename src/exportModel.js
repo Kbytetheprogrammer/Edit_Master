@@ -27,9 +27,6 @@ export function createExportRequest(media = [], clips = [], ffmpegPath, outputPa
     if (Array.isArray(clip.keyframes) && clip.keyframes.length > 0) {
       return { ok: false, reason: `O clipe “${clip.name || 'sem nome'}” contém keyframes animados que ainda não são reproduzidos no MP4. Remova os keyframes antes de exportar.` };
     }
-    if (clip.colorWarmth != null && Number(clip.colorWarmth) !== 0) {
-      return { ok: false, reason: `O clipe “${clip.name || 'sem nome'}” usa aquecimento de cor, que ainda não está disponível no renderizador MP4.` };
-    }
   }
 
   const visualClips = clips.filter(clip => VISUAL_TYPES.has(clip.type));
@@ -64,6 +61,7 @@ export function createExportRequest(media = [], clips = [], ffmpegPath, outputPa
         colorBrightness: clip.colorBrightness,
         colorContrast: clip.colorContrast,
         colorSaturation: clip.colorSaturation,
+        colorWarmth: clip.colorWarmth,
         overlayX: clip.overlayX,
         overlayY: clip.overlayY,
         overlayScale: clip.overlayScale,

@@ -84,12 +84,19 @@ test('accepts static overlay transforms and forwards them to the native renderer
   assert.equal(result.request.clips[0].overlayRotation, 12);
 });
 
-test('keeps export available for clips with default preview transforms', () => {
+test('keeps export available for clips with default preview transforms and forwards warmth', () => {
   const defaults = [{ ...clips[0], overlayX: 50, overlayY: 50, overlayScale: 100, overlayOpacity: 100, overlayRotation: 0, colorWarmth: 0, keyframes: [] }];
   const result = createExportRequest(media, defaults, 'ffmpeg.exe', 'video.mp4');
   assert.equal(result.ok, true);
+  assert.equal(result.request.clips[0].colorWarmth, 0);
 });
 
+test('forwards static color warmth to the native renderer', () => {
+  const warmed = [{ ...clips[0], colorWarmth: 65 }];
+  const result = createExportRequest(media, warmed, 'ffmpeg.exe', 'video.mp4');
+  assert.equal(result.ok, true);
+  assert.equal(result.request.clips[0].colorWarmth, 65);
+});
 
 test('rejects source ranges that start before zero or extend past media duration', () => {
   for (const range of [{ start: -0.1, end: 5 }, { start: 0, end: 12.1 }]) {

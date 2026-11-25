@@ -1423,6 +1423,7 @@ struct ExportClipInput {
     #[serde(default)] color_brightness: Option<f64>,
     #[serde(default)] color_contrast: Option<f64>,
     #[serde(default)] color_saturation: Option<f64>,
+    #[serde(default)] color_warmth: Option<f64>,
     #[serde(default)] overlay_x: Option<f64>,
     #[serde(default)] overlay_y: Option<f64>,
     #[serde(default)] overlay_scale: Option<f64>,
@@ -2184,6 +2185,16 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         let brightness = ((clip.color_brightness.unwrap_or(100.0).clamp(50.0, 150.0) - 100.0) / 100.0).clamp(-0.5, 0.5);
         let contrast = (clip.color_contrast.unwrap_or(100.0).clamp(50.0, 150.0) / 100.0).clamp(0.5, 1.5);
         let saturation = (clip.color_saturation.unwrap_or(100.0).clamp(0.0, 200.0) / 100.0).clamp(0.0, 2.0);
+        let warmth = clip.color_warmth.unwrap_or(0.0).clamp(0.0, 100.0) / 100.0 * 0.45;
+        let sepia_rr = 1.0 - warmth + warmth * 0.393;
+        let sepia_rg = warmth * 0.769;
+        let sepia_rb = warmth * 0.189;
+        let sepia_gr = warmth * 0.349;
+        let sepia_gg = 1.0 - warmth + warmth * 0.686;
+        let sepia_gb = warmth * 0.168;
+        let sepia_br = warmth * 0.272;
+        let sepia_bg = warmth * 0.534;
+        let sepia_bb = 1.0 - warmth + warmth * 0.131;
         let overlay_x = clip.overlay_x.unwrap_or(50.0).clamp(0.0, 100.0);
         let overlay_y = clip.overlay_y.unwrap_or(50.0).clamp(0.0, 100.0);
         let overlay_scale = (clip.overlay_scale.unwrap_or(100.0).clamp(10.0, 300.0) / 100.0).clamp(0.1, 3.0);
@@ -2192,7 +2203,7 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         let offset_x = (overlay_x - 50.0) * 1.2;
         let offset_y = (overlay_y - 50.0) * 1.2;
         filters.push(format!(
-            "[{index}:v:0]setpts=PTS/{speed:.4},fps={fps},scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,eq=brightness={brightness:.4}:contrast={contrast:.4}:saturation={saturation:.4},format=rgba,scale=iw*{overlay_scale:.4}:ih*{overlay_scale:.4},rotate={:.6}:c=black@0:ow=rotw(iw):oh=roth(ih),colorchannelmixer=aa={overlay_opacity:.4}[fg{index}]",
+            "[{index}:v:0]setpts=PTS/{speed:.4},fps={fps},scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,eq=brightness={brightness:.4}:contrast={contrast:.4}:saturation={saturation:.4},colorchannelmixer=rr={sepia_rr:.5}:rg={sepia_rg:.5}:rb={sepia_rb:.5}:gr={sepia_gr:.5}:gg={sepia_gg:.5}:gb={sepia_gb:.5}:br={sepia_br:.5}:bg={sepia_bg:.5}:bb={sepia_bb:.5},format=rgba,scale=iw*{overlay_scale:.4}:ih*{overlay_scale:.4},rotate={:.6}:c=black@0:ow=rotw(iw):oh=roth(ih),colorchannelmixer=aa={overlay_opacity:.4}[fg{index}]",
             overlay_rotation.to_radians()
         ));
         filters.push(format!("color=c=black:s={width}x{height}:r={fps}:d={:.4},format=rgba[bg{index}]", render_durations[index]));
