@@ -73,11 +73,15 @@ test('refuses to silently omit subtitle and title cues from the exported MP4', (
   assert.match(result.reason, /títulos ou legendas/i);
 });
 
-test('refuses to silently omit overlay transforms from the exported MP4', () => {
-  const transformed = [{ ...clips[0], overlayX: 70 }];
+test('accepts static overlay transforms and forwards them to the native renderer', () => {
+  const transformed = [{ ...clips[0], overlayX: 70, overlayY: 30, overlayScale: 125, overlayOpacity: 80, overlayRotation: 12 }];
   const result = createExportRequest(media, transformed, 'ffmpeg.exe', 'video.mp4');
-  assert.equal(result.ok, false);
-  assert.match(result.reason, /transformações/i);
+  assert.equal(result.ok, true);
+  assert.equal(result.request.clips[0].overlayX, 70);
+  assert.equal(result.request.clips[0].overlayY, 30);
+  assert.equal(result.request.clips[0].overlayScale, 125);
+  assert.equal(result.request.clips[0].overlayOpacity, 80);
+  assert.equal(result.request.clips[0].overlayRotation, 12);
 });
 
 test('keeps export available for clips with default preview transforms', () => {

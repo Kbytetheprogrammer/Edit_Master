@@ -24,14 +24,6 @@ export function createExportRequest(media = [], clips = [], ffmpegPath, outputPa
     return { ok: false, reason: 'Esta timeline contém títulos ou legendas. A exportação com texto ainda está sendo integrada; nenhum arquivo foi renderizado.' };
   }
   for (const clip of clips.filter(item => VISUAL_TYPES.has(item.type))) {
-    const changedTransform =
-      (clip.overlayX != null && Number(clip.overlayX) !== 50) ||
-      (clip.overlayY != null && Number(clip.overlayY) !== 50) ||
-      (clip.overlayScale != null && Number(clip.overlayScale) !== 100) ||
-      (clip.overlayOpacity != null && Number(clip.overlayOpacity) !== 100) ||
-      (clip.overlayRotation != null && Number(clip.overlayRotation) !== 0) ||
-      (clip.colorWarmth != null && Number(clip.colorWarmth) !== 0) ||
-      (Array.isArray(clip.keyframes) && clip.keyframes.length > 0);
     if (Array.isArray(clip.keyframes) && clip.keyframes.length > 0) {
       return { ok: false, reason: `O clipe “${clip.name || 'sem nome'}” contém keyframes animados que ainda não são reproduzidos no MP4. Remova os keyframes antes de exportar.` };
     }
