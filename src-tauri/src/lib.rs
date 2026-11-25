@@ -1449,6 +1449,15 @@ fn default_export_height() -> u32 { 1080 }
 fn default_export_fps() -> u32 { 60 }
 fn default_export_crf() -> u32 { 20 }
 
+fn warmth_color_matrix(value: f64) -> [f64; 9] {
+    let warmth = value.clamp(0.0, 100.0) / 100.0 * 0.45;
+    [
+        1.0 - warmth + warmth * 0.393, warmth * 0.769, warmth * 0.189,
+        warmth * 0.349, 1.0 - warmth + warmth * 0.686, warmth * 0.168,
+        warmth * 0.272, warmth * 0.534, 1.0 - warmth + warmth * 0.131,
+    ]
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ExtractAudioRequest {
@@ -2185,16 +2194,8 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         let brightness = ((clip.color_brightness.unwrap_or(100.0).clamp(50.0, 150.0) - 100.0) / 100.0).clamp(-0.5, 0.5);
         let contrast = (clip.color_contrast.unwrap_or(100.0).clamp(50.0, 150.0) / 100.0).clamp(0.5, 1.5);
         let saturation = (clip.color_saturation.unwrap_or(100.0).clamp(0.0, 200.0) / 100.0).clamp(0.0, 2.0);
-        let warmth = clip.color_warmth.unwrap_or(0.0).clamp(0.0, 100.0) / 100.0 * 0.45;
-        let sepia_rr = 1.0 - warmth + warmth * 0.393;
-        let sepia_rg = warmth * 0.769;
-        let sepia_rb = warmth * 0.189;
-        let sepia_gr = warmth * 0.349;
-        let sepia_gg = 1.0 - warmth + warmth * 0.686;
-        let sepia_gb = warmth * 0.168;
-        let sepia_br = warmth * 0.272;
-        let sepia_bg = warmth * 0.534;
-        let sepia_bb = 1.0 - warmth + warmth * 0.131;
+        let [sepia_rr, sepia_rg, sepia_rb, sepia_gr, sepia_gg, sepia_gb, sepia_br, sepia_bg, sepia_bb] =
+            warmth_color_matrix(clip.color_warmth.unwrap_or(0.0));
         let overlay_x = clip.overlay_x.unwrap_or(50.0).clamp(0.0, 100.0);
         let overlay_y = clip.overlay_y.unwrap_or(50.0).clamp(0.0, 100.0);
         let overlay_scale = (clip.overlay_scale.unwrap_or(100.0).clamp(10.0, 300.0) / 100.0).clamp(0.1, 3.0);
@@ -2533,5 +2534,30 @@ mod ffprobe_audio_detection_tests {
         let error = probe_audio_result(false, "", "Invalid data found").unwrap_err();
         assert!(error.contains("FFprobe"));
         assert!(error.contains("Invalid data found"));
+    }
+}
+
+#[cfg(test)]
+mod warmth_color_tests {
+    use super::warmth_color_matrix;
+
+    #[test]
+    fn zero_warmth_preserves_original_rgb_channels() {
+        assert_eq!(warmth_color_matrix(0.0), [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn warmth_is_clamped_to_the_preview_range() {
+        assert_eq!(warmth_color_matrix(-10.0), warmth_color_matrix(0.0));
+        assert_eq!(warmth_color_matrix(150.0), warmth_color_matrix(100.0));
+    }
+
+    #[test]
+    fn positive_warmth_blends_in_the_sepia_matrix() {
+        let matrix = warmth_color_matrix(100.0);
+        assert!(matrix[1] > 0.0);
+        assert!(matrix[3] > 0.0);
+        assert!(matrix[7] > 0.0);
+        assert!(matrix[0] < 1.0);
     }
 }
