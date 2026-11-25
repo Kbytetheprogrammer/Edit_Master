@@ -140,7 +140,7 @@ function App() {
   };
   const activeTextCue = getActiveTextCue(subtitles, active?.id, time);
   const visibleMedia = useMemo(() => media.filter(m => (filter === 'all' || m.type === filter) && m.name.toLowerCase().includes(search.toLowerCase())), [media, filter, search]);
-  const totalDuration = useMemo(() => clips.reduce((sum, c) => sum + (c.duration || 5), 0), [clips]);
+  const totalDuration = useMemo(() => clips.filter(c => c.type === 'video' || c.type === 'image').reduce((sum, c) => sum + (c.duration || 5), 0), [clips]);
   const preferencesChanged = JSON.stringify(draftPreferences) !== JSON.stringify(preferences);
   const selectedDuplicateFiles = useMemo(
     () => getSelectedDuplicateFiles(duplicateGroups, duplicateKeepPaths, duplicateDeletePaths),
