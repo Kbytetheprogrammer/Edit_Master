@@ -21,8 +21,14 @@ export function createExportRequest(media = [], clips = [], ffmpegPath, outputPa
   // adjustments are rendered natively; animated keyframes and text cues are
   // rejected until their renderer paths are implemented.
   const visualMediaIds = new Set(clips.filter(clip => VISUAL_TYPES.has(clip.type)).map(clip => clip.mediaId));
-  if (Array.isArray(subtitles) && subtitles.some(cue => visualMediaIds.has(cue.mediaId))) {
-    return { ok: false, reason: 'Esta timeline contém títulos ou legendas. A exportação com texto ainda está sendo integrada; nenhum arquivo foi renderizado.' };
+  const exportSubtitles = (Array.isArray(subtitles) ? subtitles : [])
+    .filter(cue => cue && visualMediaIds.has(cue.mediaId));
+  for (const cue of exportSubtitles) {
+    const start = Number(cue.start);
+    const end = Number(cue.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start || !String(cue.text || '').trim()) {
+      return { ok: false, reason: 'Uma das legendas ou títulos tem texto ou intervalo de tempo inválido.' };
+    }
   }
   for (const clip of clips.filter(item => VISUAL_TYPES.has(item.type))) {
     if (Array.isArray(clip.keyframes) && clip.keyframes.length > 0) {
@@ -48,6 +54,14 @@ export function createExportRequest(media = [], clips = [], ffmpegPath, outputPa
       ffmpegPath: String(ffmpegPath),
       outputPath: String(outputPath),
       media: usedMedia,
+      subtitles: exportSubtitles.map((cue, index) => ({
+        id: String(cue.id || `cue-${index + 1}`),
+        mediaId: String(cue.mediaId),
+        start: Number(cue.start),
+        end: Number(cue.end),
+        text: String(cue.text).slice(0, 5000),
+        kind: cue.kind === 'title' ? 'title' : 'subtitle',
+      })),
       clips: clips.map(clip => ({
         mediaId: clip.mediaId,
         type: clip.type,

@@ -114,7 +114,7 @@ const lessons = [
       'Abra Exportar MP4. FFmpeg e FFprobe incluídos no instalador são detectados automaticamente; se necessário, selecione um ffmpeg.exe confiável manualmente.',
       'A predefinição de destino é Full HD 1920 × 1080 a 60 FPS, com vídeo H.264 e áudio AAC.',
       'Escolha um destino com extensão .mp4 e aguarde a conclusão.',
-      'A exportação aplica correções estáticas de brilho, contraste, saturação e aquecimento, além de posição, escala, opacidade e rotação. Keyframes animados, títulos/legendas e composição em múltiplas camadas ainda não são renderizados.'
+      'A exportação aplica correções estáticas de brilho, contraste, saturação e aquecimento, além de posição, escala, opacidade e rotação. Keyframes animados e composição em múltiplas camadas ainda não são renderizados.'
     ]
   },
   {
@@ -168,7 +168,7 @@ function HelpCenter({ onClose }) {
       </div>
       <div className="help-course-note">
         <b>Nota sobre a versão 1.0</b>
-        <p>Este curso descreve o comportamento da versão candidata. O instalador inclui FFmpeg/FFprobe e Whisper Tiny; a detecção automática desses recursos ainda precisa ser validada no Windows. A exportação MP4 aplica correções de cor e transformações estáticas; keyframes animados, títulos/legendas e composição em múltiplas camadas ainda não são renderizados. O atualizador pela internet também precisa ser implementado e validado antes do lançamento final.</p>
+        <p>Este curso descreve o comportamento da versão candidata. O instalador inclui FFmpeg/FFprobe e Whisper Tiny; a detecção automática desses recursos ainda precisa ser validada no Windows. A exportação MP4 aplica correções de cor, transformações estáticas e textos SRT/títulos; keyframes animados e composição em múltiplas camadas ainda não são renderizados. O atualizador pela internet também precisa ser implementado e validado antes do lançamento final.</p>
       </div>
       <button className="export-button" onClick={onClose}>Concluir curso</button>
     </div>

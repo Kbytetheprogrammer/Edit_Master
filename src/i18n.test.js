@@ -49,3 +49,9 @@ test('translates the updated MP4 renderer limitations in both supported language
   assert.match(translateText(note, 'en'), /MP4 export applies color adjustments and static transforms/);
   assert.match(translateText(note, 'es'), /La exportación MP4 aplica ajustes de color y transformaciones estáticas/);
 });
+
+test('translates rendered subtitle export capabilities and remaining limitations', () => {
+  const text = 'A exportação MP4 aplica correções de cor, transformações estáticas e textos SRT/títulos; keyframes animados e composição em múltiplas camadas ainda não são renderizados.';
+  assert.match(translateText(text, 'en'), /SRT\/title text/);
+  assert.match(translateText(text, 'es'), /texto SRT\/títulos/);
+});

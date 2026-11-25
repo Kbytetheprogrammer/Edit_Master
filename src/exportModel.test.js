@@ -66,11 +66,25 @@ test('clamps custom export dimensions and frame rate at the native boundary', ()
   assert.equal(result.request.fps, 30);
 });
 
-test('refuses to silently omit subtitle and title cues from the exported MP4', () => {
-  const cue = { id: 's1', mediaId: 'v1', start: 1, end: 3, text: 'Olá', kind: 'title' };
-  const result = createExportRequest(media, clips, 'ffmpeg.exe', 'video.mp4', {}, [cue]);
-  assert.equal(result.ok, false);
-  assert.match(result.reason, /títulos ou legendas/i);
+test('forwards subtitle and title cues to the native MP4 renderer', () => {
+  const cues = [
+    { id: 's1', mediaId: 'v1', start: 1, end: 3, text: 'Olá', kind: 'title' },
+    { id: 's2', mediaId: 'v1', start: 4, end: 6, text: 'Tudo bem?', kind: 'subtitle' },
+  ];
+  const result = createExportRequest(media, clips, 'ffmpeg.exe', 'video.mp4', {}, cues);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.request.subtitles, cues);
+});
+
+test('rejects subtitle cues with invalid time ranges or empty text', () => {
+  for (const cue of [
+    { id: 'bad-time', mediaId: 'v1', start: 3, end: 2, text: 'Texto' },
+    { id: 'empty-text', mediaId: 'v1', start: 1, end: 2, text: '  ' },
+  ]) {
+    const result = createExportRequest(media, clips, 'ffmpeg.exe', 'video.mp4', {}, [cue]);
+    assert.equal(result.ok, false);
+    assert.match(result.reason, /legendas ou títulos/i);
+  }
 });
 
 test('accepts static overlay transforms and forwards them to the native renderer', () => {
