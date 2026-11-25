@@ -2171,8 +2171,13 @@ fn atempo_chain(speed: f64) -> String {
 fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResult, String> {
     let ffmpeg = PathBuf::from(&request.ffmpeg_path);
     if !ffmpeg.is_file() { return Err("Selecione um ffmpeg.exe válido nas configurações de exportação.".into()); }
-    let ffmpeg = ffmpeg.canonicalize()
-        .map_err(|error| format!("Não foi possível acessar o FFmpeg selecionado: {error}"))?;
+    let ffmpeg = if ffmpeg.is_absolute() {
+        ffmpeg
+    } else {
+        std::env::current_dir()
+            .map_err(|error| format!("Não foi possível identificar a pasta atual: {error}"))?
+            .join(ffmpeg)
+    };
     let width = request.width.clamp(640, 3840) / 2 * 2;
     let height = request.height.clamp(360, 2160) / 2 * 2;
     let fps = request.fps.clamp(24, 60);
