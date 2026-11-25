@@ -99,3 +99,28 @@ test('accepts a valid trimmed source range at the media boundaries', () => {
   const result = createExportRequest(media, [{ ...clips[0], start: 0, end: 12 }], 'ffmpeg.exe', 'video.mp4');
   assert.equal(result.ok, true);
 });
+
+test('includes static position, scale, opacity and rotation transforms in the native render request', () => {
+  const transformed = [{
+    ...clips[0],
+    overlayX: 68,
+    overlayY: 35,
+    overlayScale: 125,
+    overlayOpacity: 72,
+    overlayRotation: 18,
+  }];
+  const result = createExportRequest(media, transformed, 'ffmpeg.exe', 'video.mp4');
+  assert.equal(result.ok, true);
+  assert.equal(result.request.clips[0].overlayX, 68);
+  assert.equal(result.request.clips[0].overlayY, 35);
+  assert.equal(result.request.clips[0].overlayScale, 125);
+  assert.equal(result.request.clips[0].overlayOpacity, 72);
+  assert.equal(result.request.clips[0].overlayRotation, 18);
+});
+
+test('continues to reject animated keyframes until interpolation is rendered', () => {
+  const animated = [{ ...clips[0], keyframes: [{ time: 0, x: 50 }, { time: 2, x: 80 }] }];
+  const result = createExportRequest(media, animated, 'ffmpeg.exe', 'video.mp4');
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /keyframes animados/i);
+});
