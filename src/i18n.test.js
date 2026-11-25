@@ -33,3 +33,19 @@ test('keeps Portuguese as the source language and unknown text unchanged', () =>
   assert.equal(translateText('Armazenamento de mídia', 'pt-BR'), 'Armazenamento de mídia');
   assert.equal(translateText('Texto ainda não catalogado', 'en'), 'Texto ainda não catalogado');
 });
+
+test('translates the updated MP4 renderer limitations in both supported languages', () => {
+  const lesson = 'A exportação aplica correções estáticas de brilho, contraste, saturação e aquecimento, além de posição, escala, opacidade e rotação. Keyframes animados, títulos/legendas e composição em múltiplas camadas ainda não são renderizados.';
+  assert.equal(
+    translateText(lesson, 'en'),
+    'Export applies static brightness, contrast, saturation, and warmth adjustments, plus position, scale, opacity, and rotation. Animated keyframes, titles/subtitles, and multi-layer compositing are not rendered yet.'
+  );
+  assert.equal(
+    translateText(lesson, 'es'),
+    'La exportación aplica ajustes estáticos de brillo, contraste, saturación y calidez, además de posición, escala, opacidad y rotación. Los fotogramas clave animados, títulos/subtítulos y la composición multicapa aún no se renderizan.'
+  );
+
+  const note = 'Este curso descreve o comportamento da versão candidata. O instalador inclui FFmpeg/FFprobe e Whisper Tiny; a detecção automática desses recursos ainda precisa ser validada no Windows. A exportação MP4 aplica correções de cor e transformações estáticas; keyframes animados, títulos/legendas e composição em múltiplas camadas ainda não são renderizados. O atualizador pela internet também precisa ser implementado e validado antes do lançamento final.';
+  assert.match(translateText(note, 'en'), /MP4 export applies color adjustments and static transforms/);
+  assert.match(translateText(note, 'es'), /La exportación MP4 aplica ajustes de color y transformaciones estáticas/);
+});
