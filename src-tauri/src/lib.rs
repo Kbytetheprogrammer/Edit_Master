@@ -2648,3 +2648,75 @@ mod warmth_color_tests {
         assert!(matrix[0] < 1.0);
     }
 }
+
+#[cfg(test)]
+mod subtitle_export_tests {
+    use super::{build_export_subtitle_srt, srt_timestamp, ExportClipInput, ProjectSubtitle};
+
+    fn clip(media_id: &str, media_type: &str, start: f64, end: f64, duration: f64, speed: f64) -> ExportClipInput {
+        ExportClipInput {
+            media_id: media_id.to_string(),
+            media_type: media_type.to_string(),
+            duration,
+            start,
+            end,
+            audio_gain: None,
+            audio_fade_in: None,
+            audio_fade_out: None,
+            audio_muted: None,
+            playback_speed: Some(speed),
+            color_brightness: None,
+            color_contrast: None,
+            color_saturation: None,
+            color_warmth: None,
+            overlay_x: None,
+            overlay_y: None,
+            overlay_scale: None,
+            overlay_opacity: None,
+            overlay_rotation: None,
+        }
+    }
+
+    fn cue(media_id: &str, start: f64, end: f64, text: &str) -> ProjectSubtitle {
+        ProjectSubtitle {
+            id: "cue-1".to_string(),
+            media_id: media_id.to_string(),
+            start,
+            end,
+            text: text.to_string(),
+            kind: "subtitle".to_string(),
+        }
+    }
+
+    #[test]
+    fn formats_srt_timestamps_to_milliseconds() {
+        assert_eq!(srt_timestamp(61.234), "00:01:01,234");
+    }
+
+    #[test]
+    fn maps_subtitles_through_trimmed_and_speed_adjusted_clips() {
+        let subtitles = vec![cue("m1", 3.0, 7.0, "Trecho sincronizado")];
+        let clips = vec![clip("m1", "video", 5.0, 15.0, 20.0, 2.0)];
+        let refs = clips.iter().collect::<Vec<_>>();
+        let srt = build_export_subtitle_srt(&subtitles, &refs, &[5.0]);
+        assert!(srt.contains("00:00:00,000 --> 00:00:01,000"));
+        assert!(srt.contains("Trecho sincronizado"));
+    }
+
+    #[test]
+    fn ignores_subtitles_outside_the_clip_source_range() {
+        let subtitles = vec![cue("m1", 0.0, 2.0, "Fora do corte")];
+        let clips = vec![clip("m1", "video", 5.0, 10.0, 20.0, 1.0)];
+        let refs = clips.iter().collect::<Vec<_>>();
+        assert!(build_export_subtitle_srt(&subtitles, &refs, &[5.0]).is_empty());
+    }
+
+    #[test]
+    fn image_subtitle_timing_does_not_apply_video_playback_speed() {
+        let subtitles = vec![cue("image-1", 0.0, 4.0, "Título")];
+        let clips = vec![clip("image-1", "image", 0.0, 4.0, 4.0, 2.0)];
+        let refs = clips.iter().collect::<Vec<_>>();
+        let srt = build_export_subtitle_srt(&subtitles, &refs, &[4.0]);
+        assert!(srt.contains("00:00:00,000 --> 00:00:04,000"));
+    }
+}
