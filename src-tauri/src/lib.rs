@@ -1470,7 +1470,7 @@ fn build_export_subtitle_srt(
     for (index, clip) in clips.iter().enumerate() {
         let source_start = clip.start.max(0.0);
         let source_end = clip.end.min(clip.duration).max(source_start);
-        let speed = clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0);
+        let speed = if clip.media_type == "image" { 1.0 } else { clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0) };
 
         for cue in subtitles.iter().filter(|cue| cue.media_id == clip.media_id) {
             if !cue.start.is_finite() || !cue.end.is_finite() || cue.end <= cue.start {
