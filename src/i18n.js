@@ -1139,7 +1139,7 @@ Object.assign(dictionaries.en, {
   'O desinstalador foi iniciado. O Edit Master será fechado.':'The uninstaller has started. Edit Master will now close.'
 });
 Object.assign(dictionaries.es, {
-  'A renderização atual concatena os segmentos visuais em sequência e mistura áudio de forma básica. Ela ainda não reproduz integralmente todas as camadas, transições e títulos da prévia.':'La exportación aplica ajustes estáticos de brillo, contraste, saturación y calidez, además de posición, escala, opacidad y rotación. Los fotogramas clave animados, títulos/subtítulos y la composición multicapa aún no se renderizan.',
+  'A exportação aplica correções estáticas de brilho, contraste, saturação e aquecimento, além de posição, escala, opacidade e rotação. Keyframes animados, títulos/legendas e composição em múltiplas camadas ainda não são renderizados.':'La exportación aplica ajustes estáticos de brillo, contraste, saturación y calidez, además de posición, escala, opacidad y rotación. Los fotogramas clave animados, títulos/subtítulos y la composición multicapa aún no se renderizan.',
   'O desinstalador foi iniciado. O Edit Master será fechado.':'El desinstalador se ha iniciado. Edit Master se cerrará ahora.'
 });
 
