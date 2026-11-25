@@ -17,9 +17,9 @@ export function createExportRequest(media = [], clips = [], ffmpegPath, outputPa
     usedMedia.push({ id: item.id, sourcePath: item.sourcePath });
   }
 
-  // Never silently omit preview features. Static transforms and color
-  // adjustments are rendered natively; animated keyframes and text cues are
-  // rejected until their renderer paths are implemented.
+  // Never silently omit preview features. Static transforms, color
+  // adjustments, and timed text cues are rendered natively. Animated
+  // keyframes remain blocked until interpolation is implemented.
   const visualMediaIds = new Set(clips.filter(clip => VISUAL_TYPES.has(clip.type)).map(clip => clip.mediaId));
   const exportSubtitles = (Array.isArray(subtitles) ? subtitles : [])
     .filter(cue => cue && visualMediaIds.has(cue.mediaId));
