@@ -17,8 +17,9 @@ export function createExportRequest(media = [], clips = [], ffmpegPath, outputPa
     usedMedia.push({ id: item.id, sourcePath: item.sourcePath });
   }
 
-  // Never silently produce an MP4 that differs from the editor preview.
-  // These preview features are integrated into the renderer in a later 1.0 step.
+  // Never silently omit preview features. Static transforms and color
+  // adjustments are rendered natively; animated keyframes and text cues are
+  // rejected until their renderer paths are implemented.
   const visualMediaIds = new Set(clips.filter(clip => VISUAL_TYPES.has(clip.type)).map(clip => clip.mediaId));
   if (Array.isArray(subtitles) && subtitles.some(cue => visualMediaIds.has(cue.mediaId))) {
     return { ok: false, reason: 'Esta timeline contém títulos ou legendas. A exportação com texto ainda está sendo integrada; nenhum arquivo foi renderizado.' };
