@@ -56,6 +56,13 @@ jobs:
           Copy-Item $ffmpegExe.FullName (Join-Path $ffmpegDir "ffmpeg.exe") -Force
           Copy-Item $ffprobeExe.FullName (Join-Path $ffmpegDir "ffprobe.exe") -Force
 
+          # Subtitle rendering uses FFmpeg's libass-backed subtitles filter.
+          $ffmpegFilters = & (Join-Path $ffmpegDir "ffmpeg.exe") -hide_banner -filters 2>&1 | Out-String
+          if ($LASTEXITCODE -ne 0 -or $ffmpegFilters -notmatch '(?m)^\s*[.A-Z]{3}\s+subtitles\s+') {
+            throw "O FFmpeg empacotado não oferece o filtro subtitles (libass); não é seguro gerar a Beta sem renderização de legendas."
+          }
+          Write-Host "Verified bundled FFmpeg subtitles filter (libass)."
+
           git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git (Join-Path $env:RUNNER_TEMP "whisper.cpp")
           cmake -S (Join-Path $env:RUNNER_TEMP "whisper.cpp") -B (Join-Path $env:RUNNER_TEMP "whisper-build") -A x64 -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_SERVER=OFF
           cmake --build (Join-Path $env:RUNNER_TEMP "whisper-build") --config Release --target whisper-cli
