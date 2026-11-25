@@ -1423,6 +1423,11 @@ struct ExportClipInput {
     #[serde(default)] color_brightness: Option<f64>,
     #[serde(default)] color_contrast: Option<f64>,
     #[serde(default)] color_saturation: Option<f64>,
+    #[serde(default)] overlay_x: Option<f64>,
+    #[serde(default)] overlay_y: Option<f64>,
+    #[serde(default)] overlay_scale: Option<f64>,
+    #[serde(default)] overlay_opacity: Option<f64>,
+    #[serde(default)] overlay_rotation: Option<f64>,
 }
 
 #[derive(Debug, Deserialize)]
