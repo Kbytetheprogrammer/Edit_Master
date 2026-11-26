@@ -1411,6 +1411,16 @@ Object.assign(dictionaries.es, {
   "Volume do clipe · {Math.round((selectedClipData.audioGain ?? 1)*100)}%": "Volumen del clip · {Math.round((selectedClipData.audioGain ?? 1)*100)}%",
 });
 
+// Keep full renderer-capability notices localized as complete UI strings.
+Object.assign(dictionaries.en, {
+  'A exportação aplica correções estáticas de brilho, contraste, saturação e aquecimento, além de posição, escala, opacidade e rotação. Keyframes animados, títulos/legendas e composição em múltiplas camadas ainda não são renderizados.':'Export applies static brightness, contrast, saturation, and warmth adjustments, plus position, scale, opacity, and rotation. Animated keyframes, titles/subtitles, and multi-layer compositing are not rendered yet.',
+  'A exportação MP4 aplica correções de cor, transformações estáticas e textos SRT/títulos; keyframes animados e composição em múltiplas camadas ainda não são renderizados.':'MP4 export applies color adjustments, static transforms, and SRT/title text; animated keyframes and multi-layer compositing are not rendered yet.'
+});
+Object.assign(dictionaries.es, {
+  'A exportação aplica correções estáticas de brilho, contraste, saturação e aquecimento, além de posição, escala, opacidade e rotação. Keyframes animados, títulos/legendas e composição em múltiplas camadas ainda não são renderizados.':'La exportación aplica ajustes estáticos de brillo, contraste, saturación y calidez, además de posición, escala, opacidad y rotación. Los fotogramas clave animados, títulos/subtítulos y la composición multicapa aún no se renderizan.',
+  'A exportação MP4 aplica correções de cor, transformações estáticas e textos SRT/títulos; keyframes animados e composição em múltiplas camadas ainda não são renderizados.':'La exportación MP4 aplica ajustes de color, transformaciones estáticas y texto SRT/títulos; los fotogramas clave animados y la composición multicapa aún no se renderizan.'
+});
+
 const attributeNames = new Set([
   'placeholder', 'title', 'aria-label', 'aria-description', 'alt', 'label',
   'description', 'helperText', 'emptyLabel'
