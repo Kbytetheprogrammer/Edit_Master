@@ -68,9 +68,9 @@ ${StrLoc}
 !define WEBVIEW2BOOTSTRAPPERPATH "{{webview2_bootstrapper_path}}"
 !define WEBVIEW2INSTALLERPATH "{{webview2_installer_path}}"
 !define MINIMUMWEBVIEW2VERSION "{{minimum_webview2_version}}"
-!define UNINSTKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCTNAME}"
-!define MANUKEY "Software\${MANUFACTURER}"
-!define MANUPRODUCTKEY "${MANUKEY}\${PRODUCTNAME}"
+!define UNINSTKEY "Software\Microsoft\Windows\CurrentVersion\Uninstall${PRODUCTNAME}"
+!define MANUKEY "Software${MANUFACTURER}"
+!define MANUPRODUCTKEY "${MANUKEY}${PRODUCTNAME}"
 !define UNINSTALLERSIGNCOMMAND "{{uninstaller_sign_cmd}}"
 !define ESTIMATEDSIZE "{{estimated_size}}"
 !define STARTMENUFOLDER "{{start_menu_folder}}"
@@ -88,7 +88,7 @@ OutFile "${OUTFILE}"
 ; We don't actually use this value as default install path,
 ; it's just for nsis to append the product name folder in the directory selector
 ; https://nsis.sourceforge.io/Reference/InstallDir
-!define PLACEHOLDER_INSTALL_DIR "placeholder\${PRODUCTNAME}"
+!define PLACEHOLDER_INSTALL_DIR "placeholder${PRODUCTNAME}"
 InstallDir "${PLACEHOLDER_INSTALL_DIR}"
 
 VIProductVersion "${VERSIONWITHBUILD}"
@@ -387,7 +387,7 @@ Function PageLeaveReinstall
     ${IfThen} ${Errors} ${|} StrCpy $0 2 ${|} ; ExecWait failed, set fake exit code
 
     ${If} $0 <> 0
-    ${OrIf} ${FileExists} "$INSTDIR\${MAINBINARYNAME}.exe"
+    ${OrIf} ${FileExists} "$INSTDIR${MAINBINARYNAME}.exe"
       ; User cancelled wix uninstaller? return to select un/reinstall page
       ${If} $WixMode = 1
       ${AndIf} $0 = 1602
@@ -456,27 +456,27 @@ Var EM_OpenCheck
 Function EM_WelcomePage
   nsDialogs::Create 1018
   Pop $0
-  \${If} $0 == error
+  ${If} $0 == error
     Abort
-  \${EndIf}
+  ${EndIf}
   SetCtlColors $0 "F4F4F4" "171717"
-  \${NSD_CreateLabel} 0u 0u 8u 300u ""
+  ${NSD_CreateLabel} 0u 0u 8u 300u ""
   Pop $1
   SetCtlColors $1 "FF7A00" "FF7A00"
-  \${NSD_CreateLabel} 28u 34u 450u 34u "EDIT MASTER"
+  ${NSD_CreateLabel} 28u 34u 450u 34u "EDIT MASTER"
   Pop $1
   CreateFont $2 "Segoe UI" 22 700
-  SendMessage $1 \${WM_SETFONT} $2 1
+  SendMessage $1 ${WM_SETFONT} $2 1
   SetCtlColors $1 "FF7A00" "171717"
-  \${NSD_CreateLabel} 30u 82u 450u 30u "Seu próximo projeto começa aqui."
+  ${NSD_CreateLabel} 30u 82u 450u 30u "Seu próximo projeto começa aqui."
   Pop $1
   CreateFont $2 "Segoe UI" 13 400
-  SendMessage $1 \${WM_SETFONT} $2 1
+  SendMessage $1 ${WM_SETFONT} $2 1
   SetCtlColors $1 "FFFFFF" "171717"
-  \${NSD_CreateLabel} 30u 126u 450u 54u "Um editor de vídeo leve, simples e pronto para criar. Este assistente vai instalar o Edit Master no seu computador."
+  ${NSD_CreateLabel} 30u 126u 450u 54u "Um editor de vídeo leve, simples e pronto para criar. Este assistente vai instalar o Edit Master no seu computador."
   Pop $1
   SetCtlColors $1 "C9C9C9" "171717"
-  \${NSD_CreateLabel} 30u 224u 450u 22u "VERSÃO \${VERSION}  |  WINDOWS"
+  ${NSD_CreateLabel} 30u 224u 450u 22u "VERSÃO ${VERSION}  |  WINDOWS"
   Pop $1
   SetCtlColors $1 "FF7A00" "171717"
   nsDialogs::Show
@@ -485,86 +485,86 @@ FunctionEnd
 Function EM_ComponentsPage
   nsDialogs::Create 1018
   Pop $0
-  \${If} $0 == error
+  ${If} $0 == error
     Abort
-  \${EndIf}
+  ${EndIf}
   SetCtlColors $0 "FFFFFF" "171717"
-  \${NSD_CreateLabel} 0u 0u 8u 300u ""
+  ${NSD_CreateLabel} 0u 0u 8u 300u ""
   Pop $1
   SetCtlColors $1 "FF7A00" "FF7A00"
-  \${NSD_CreateLabel} 28u 24u 450u 28u "Componentes opcionais"
+  ${NSD_CreateLabel} 28u 24u 450u 28u "Componentes opcionais"
   Pop $1
   CreateFont $2 "Segoe UI" 17 700
-  SendMessage $1 \${WM_SETFONT} $2 1
+  SendMessage $1 ${WM_SETFONT} $2 1
   SetCtlColors $1 "FF7A00" "171717"
-  \${NSD_CreateLabel} 30u 62u 450u 30u "Escolha os recursos adicionais que deseja instalar."
+  ${NSD_CreateLabel} 30u 62u 450u 30u "Escolha os recursos adicionais que deseja instalar."
   Pop $1
   SetCtlColors $1 "D0D0D0" "171717"
-  \${NSD_CreateCheckbox} 34u 112u 430u 22u "FFmpeg + FFprobe — exportação e processamento de mídia"
+  ${NSD_CreateCheckbox} 34u 112u 430u 22u "FFmpeg + FFprobe — exportação e processamento de mídia"
   Pop $EM_FfmpegCheck
   SetCtlColors $EM_FfmpegCheck "FFFFFF" "171717"
-  \${NSD_CreateCheckbox} 34u 158u 430u 22u "Whisper.cpp + modelo Tiny — transcrição local"
+  ${NSD_CreateCheckbox} 34u 158u 430u 22u "Whisper.cpp + modelo Tiny — transcrição local"
   Pop $EM_WhisperCheck
   SetCtlColors $EM_WhisperCheck "FFFFFF" "171717"
-  SendMessage $EM_FfmpegCheck \${BM_SETCHECK} \${BST_CHECKED} 0
-  SendMessage $EM_WhisperCheck \${BM_SETCHECK} \${BST_CHECKED} 0
-  \${NSD_CreateLabel} 30u 212u 450u 42u "Você poderá usar o Edit Master sem o Whisper. O FFmpeg é recomendado para exportação e processamento de vídeos."
+  SendMessage $EM_FfmpegCheck ${BM_SETCHECK} ${BST_CHECKED} 0
+  SendMessage $EM_WhisperCheck ${BM_SETCHECK} ${BST_CHECKED} 0
+  ${NSD_CreateLabel} 30u 212u 450u 42u "Você poderá usar o Edit Master sem o Whisper. O FFmpeg é recomendado para exportação e processamento de vídeos."
   Pop $1
   SetCtlColors $1 "AFAFAF" "171717"
   nsDialogs::Show
 FunctionEnd
 
 Function EM_ComponentsLeave
-  \${NSD_GetState} $EM_FfmpegCheck $EM_FfmpegSelected
-  \${NSD_GetState} $EM_WhisperCheck $EM_WhisperSelected
-  \${If} $EM_FfmpegSelected == \${BST_CHECKED}
+  ${NSD_GetState} $EM_FfmpegCheck $EM_FfmpegSelected
+  ${NSD_GetState} $EM_WhisperCheck $EM_WhisperSelected
+  ${If} $EM_FfmpegSelected == ${BST_CHECKED}
     StrCpy $EM_FfmpegSelected "1"
-  \${Else}
+  ${Else}
     StrCpy $EM_FfmpegSelected "0"
-  \${EndIf}
-  \${If} $EM_WhisperSelected == \${BST_CHECKED}
+  ${EndIf}
+  ${If} $EM_WhisperSelected == ${BST_CHECKED}
     StrCpy $EM_WhisperSelected "1"
-  \${Else}
+  ${Else}
     StrCpy $EM_WhisperSelected "0"
-  \${EndIf}
+  ${EndIf}
 FunctionEnd
 
 Function EM_FinishPage
   nsDialogs::Create 1018
   Pop $0
-  \${If} $0 == error
+  ${If} $0 == error
     Abort
-  \${EndIf}
+  ${EndIf}
   SetCtlColors $0 "FFFFFF" "171717"
-  \${NSD_CreateLabel} 0u 0u 8u 300u ""
+  ${NSD_CreateLabel} 0u 0u 8u 300u ""
   Pop $1
   SetCtlColors $1 "FF7A00" "FF7A00"
-  \${NSD_CreateLabel} 28u 48u 450u 34u "INSTALAÇÃO CONCLUÍDA"
+  ${NSD_CreateLabel} 28u 48u 450u 34u "INSTALAÇÃO CONCLUÍDA"
   Pop $1
   CreateFont $2 "Segoe UI" 19 700
-  SendMessage $1 \${WM_SETFONT} $2 1
+  SendMessage $1 ${WM_SETFONT} $2 1
   SetCtlColors $1 "FF7A00" "171717"
-  \${NSD_CreateLabel} 30u 104u 450u 44u "O Edit Master foi instalado. Tudo pronto para começar seu próximo projeto."
+  ${NSD_CreateLabel} 30u 104u 450u 44u "O Edit Master foi instalado. Tudo pronto para começar seu próximo projeto."
   Pop $1
   SetCtlColors $1 "FFFFFF" "171717"
-  \${NSD_CreateCheckbox} 30u 182u 430u 22u "Abrir Edit Master agora"
+  ${NSD_CreateCheckbox} 30u 182u 430u 22u "Abrir Edit Master agora"
   Pop $EM_OpenCheck
   SetCtlColors $EM_OpenCheck "FFFFFF" "171717"
-  SendMessage $EM_OpenCheck \${BM_SETCHECK} \${BST_CHECKED} 0
+  SendMessage $EM_OpenCheck ${BM_SETCHECK} ${BST_CHECKED} 0
   GetDlgItem $1 $HWNDPARENT 1
-  SendMessage $1 \${WM_SETTEXT} 0 "Concluir"
+  SendMessage $1 ${WM_SETTEXT} 0 "Concluir"
   nsDialogs::Show
 FunctionEnd
 
 Function EM_FinishLeave
-  \${NSD_GetState} $EM_OpenCheck $0
-  \${If} $0 == \${BST_CHECKED}
-    nsis_tauri_utils::RunAsUser "$INSTDIR\\\${MAINBINARYNAME}.exe" ""
-  \${EndIf}
+  ${NSD_GetState} $EM_OpenCheck $0
+  ${If} $0 == ${BST_CHECKED}
+    nsis_tauri_utils::RunAsUser "$INSTDIR\\${MAINBINARYNAME}.exe" ""
+  ${EndIf}
 FunctionEnd
 
 Function RunMainBinary
-  nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" ""
+  nsis_tauri_utils::RunAsUser "$INSTDIR${MAINBINARYNAME}.exe" ""
 FunctionEnd
 
 ; Uninstaller Pages
@@ -655,17 +655,17 @@ Function .onInit
     !if "${INSTALLMODE}" == "perMachine"
       ${If} ${RunningX64}
         !if "${ARCH}" == "x64"
-          StrCpy $INSTDIR "$PROGRAMFILES64\${PRODUCTNAME}"
+          StrCpy $INSTDIR "$PROGRAMFILES64${PRODUCTNAME}"
         !else if "${ARCH}" == "arm64"
-          StrCpy $INSTDIR "$PROGRAMFILES64\${PRODUCTNAME}"
+          StrCpy $INSTDIR "$PROGRAMFILES64${PRODUCTNAME}"
         !else
-          StrCpy $INSTDIR "$PROGRAMFILES\${PRODUCTNAME}"
+          StrCpy $INSTDIR "$PROGRAMFILES${PRODUCTNAME}"
         !endif
       ${Else}
-        StrCpy $INSTDIR "$PROGRAMFILES\${PRODUCTNAME}"
+        StrCpy $INSTDIR "$PROGRAMFILES${PRODUCTNAME}"
       ${EndIf}
     !else if "${INSTALLMODE}" == "currentUser"
-      StrCpy $INSTDIR "$LOCALAPPDATA\${PRODUCTNAME}"
+      StrCpy $INSTDIR "$LOCALAPPDATA${PRODUCTNAME}"
     !endif
 
     Call RestorePreviousInstallLocation
@@ -712,12 +712,12 @@ FunctionEnd
 Section WebView2
   ; Check if Webview2 is already installed and skip this section
   ${If} ${RunningX64}
-    ReadRegStr $4 HKLM "SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\${WEBVIEW2APPGUID}" "pv"
+    ReadRegStr $4 HKLM "SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients${WEBVIEW2APPGUID}" "pv"
   ${Else}
-    ReadRegStr $4 HKLM "SOFTWARE\Microsoft\EdgeUpdate\Clients\${WEBVIEW2APPGUID}" "pv"
+    ReadRegStr $4 HKLM "SOFTWARE\Microsoft\EdgeUpdate\Clients${WEBVIEW2APPGUID}" "pv"
   ${EndIf}
   ${If} $4 == ""
-    ReadRegStr $4 HKCU "SOFTWARE\Microsoft\EdgeUpdate\Clients\${WEBVIEW2APPGUID}" "pv"
+    ReadRegStr $4 HKCU "SOFTWARE\Microsoft\EdgeUpdate\Clients${WEBVIEW2APPGUID}" "pv"
   ${EndIf}
 
   ${If} $4 == ""
@@ -808,7 +808,7 @@ Section Install
     !insertmacro NSIS_HOOK_PREINSTALL
   !endif
 
-  !insertmacro CheckIfAppIsRunning "$INSTDIR\${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
+  !insertmacro CheckIfAppIsRunning "$INSTDIR${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
 
   ; Copy main executable
   File "${MAINBINARYSRCPATH}"
@@ -829,7 +829,7 @@ Section Install
   ; Create file associations
   {{#each file_associations as |association| ~}}
     {{#each association.ext as |ext| ~}}
-       !insertmacro APP_ASSOCIATE "{{ext}}" "{{or association.name ext}}" "{{association-description association.description ext}}" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\",0" "Open with ${PRODUCTNAME}" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\" $\"%1$\""
+       !insertmacro APP_ASSOCIATE "{{ext}}" "{{or association.name ext}}" "{{association-description association.description ext}}" "$\"$INSTDIR${MAINBINARYNAME}.exe$\",0" "Open with ${PRODUCTNAME}" "$\"$INSTDIR${MAINBINARYNAME}.exe$\" $\"%1$\""
     {{/each}}
   {{/each}}
 
@@ -837,8 +837,8 @@ Section Install
   {{#each deep_link_protocols as |protocol| ~}}
     WriteRegStr SHCTX "Software\Classes\\{{protocol}}" "URL Protocol" ""
     WriteRegStr SHCTX "Software\Classes\\{{protocol}}" "" "URL:${BUNDLEID} protocol"
-    WriteRegStr SHCTX "Software\Classes\\{{protocol}}\DefaultIcon" "" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\",0"
-    WriteRegStr SHCTX "Software\Classes\\{{protocol}}\shell\open\command" "" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\" $\"%1$\""
+    WriteRegStr SHCTX "Software\Classes\\{{protocol}}\DefaultIcon" "" "$\"$INSTDIR${MAINBINARYNAME}.exe$\",0"
+    WriteRegStr SHCTX "Software\Classes\\{{protocol}}\shell\open\command" "" "$\"$INSTDIR${MAINBINARYNAME}.exe$\" $\"%1$\""
   {{/each}}
 
   ; Create uninstaller
@@ -865,7 +865,7 @@ Section Install
 
   ; Registry information for add/remove programs
   WriteRegStr SHCTX "${UNINSTKEY}" "DisplayName" "${PRODUCTNAME}"
-  WriteRegStr SHCTX "${UNINSTKEY}" "DisplayIcon" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\""
+  WriteRegStr SHCTX "${UNINSTKEY}" "DisplayIcon" "$\"$INSTDIR${MAINBINARYNAME}.exe$\""
   WriteRegStr SHCTX "${UNINSTKEY}" "DisplayVersion" "${VERSION}"
   WriteRegStr SHCTX "${UNINSTKEY}" "Publisher" "${MANUFACTURER}"
   WriteRegStr SHCTX "${UNINSTKEY}" "InstallLocation" "$\"$INSTDIR$\""
@@ -914,7 +914,7 @@ Function .onInstSuccess
     ${GetOptions} $CMDLINE "/R" $R0
     ${IfNot} ${Errors}
       ${GetOptions} $CMDLINE "/ARGS" $R0
-      nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" "$R0"
+      nsis_tauri_utils::RunAsUser "$INSTDIR${MAINBINARYNAME}.exe" "$R0"
     ${EndIf}
   ${EndIf}
 FunctionEnd
@@ -945,11 +945,11 @@ Section Uninstall
     !insertmacro NSIS_HOOK_PREUNINSTALL
   !endif
 
-  !insertmacro CheckIfAppIsRunning "$INSTDIR\${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
+  !insertmacro CheckIfAppIsRunning "$INSTDIR${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
 
   ; Delete the app directory and its content from disk
   ; Copy main executable
-  Delete "$INSTDIR\${MAINBINARYNAME}.exe"
+  Delete "$INSTDIR${MAINBINARYNAME}.exe"
 
   ; Delete resources
   {{#each resources}}
@@ -971,7 +971,7 @@ Section Uninstall
   ; Delete deep links
   {{#each deep_link_protocols as |protocol| ~}}
     ReadRegStr $R7 SHCTX "Software\Classes\\{{protocol}}\shell\open\command" ""
-    ${If} $R7 == "$\"$INSTDIR\${MAINBINARYNAME}.exe$\" $\"%1$\""
+    ${If} $R7 == "$\"$INSTDIR${MAINBINARYNAME}.exe$\" $\"%1$\""
       DeleteRegKey SHCTX "Software\Classes\\{{protocol}}"
     ${EndIf}
   {{/each}}
@@ -991,26 +991,26 @@ Section Uninstall
 
     ; Remove start menu shortcut
     !insertmacro MUI_STARTMENU_GETFOLDER Application $AppStartMenuFolder
-    !insertmacro IsShortcutTarget "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    !insertmacro IsShortcutTarget "$SMPROGRAMS\$AppStartMenuFolder${PRODUCTNAME}.lnk" "$INSTDIR${MAINBINARYNAME}.exe"
     Pop $0
     ${If} $0 = 1
-      !insertmacro UnpinShortcut "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk"
-      Delete "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk"
+      !insertmacro UnpinShortcut "$SMPROGRAMS\$AppStartMenuFolder${PRODUCTNAME}.lnk"
+      Delete "$SMPROGRAMS\$AppStartMenuFolder${PRODUCTNAME}.lnk"
       RMDir "$SMPROGRAMS\$AppStartMenuFolder"
     ${EndIf}
-    !insertmacro IsShortcutTarget "$SMPROGRAMS\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    !insertmacro IsShortcutTarget "$SMPROGRAMS${PRODUCTNAME}.lnk" "$INSTDIR${MAINBINARYNAME}.exe"
     Pop $0
     ${If} $0 = 1
-      !insertmacro UnpinShortcut "$SMPROGRAMS\${PRODUCTNAME}.lnk"
-      Delete "$SMPROGRAMS\${PRODUCTNAME}.lnk"
+      !insertmacro UnpinShortcut "$SMPROGRAMS${PRODUCTNAME}.lnk"
+      Delete "$SMPROGRAMS${PRODUCTNAME}.lnk"
     ${EndIf}
 
     ; Remove desktop shortcuts
-    !insertmacro IsShortcutTarget "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    !insertmacro IsShortcutTarget "$DESKTOP${PRODUCTNAME}.lnk" "$INSTDIR${MAINBINARYNAME}.exe"
     Pop $0
     ${If} $0 = 1
-      !insertmacro UnpinShortcut "$DESKTOP\${PRODUCTNAME}.lnk"
-      Delete "$DESKTOP\${PRODUCTNAME}.lnk"
+      !insertmacro UnpinShortcut "$DESKTOP${PRODUCTNAME}.lnk"
+      Delete "$DESKTOP${PRODUCTNAME}.lnk"
     ${EndIf}
   ${EndIf}
 
@@ -1045,8 +1045,8 @@ Section Uninstall
     DeleteRegKey /ifempty HKCU "${MANUKEY}"
 
     SetShellVarContext current
-    RmDir /r "$APPDATA\${BUNDLEID}"
-    RmDir /r "$LOCALAPPDATA\${BUNDLEID}"
+    RmDir /r "$APPDATA${BUNDLEID}"
+    RmDir /r "$LOCALAPPDATA${BUNDLEID}"
   ${EndIf}
 
   !ifmacrodef NSIS_HOOK_POSTUNINSTALL
@@ -1082,17 +1082,17 @@ Function CreateOrUpdateStartMenuShortcut
   ; migrate old shortcuts to target the new MAINBINARYNAME
   StrCpy $R0 0
 
-  !insertmacro IsShortcutTarget "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk" "$INSTDIR\$OldMainBinaryName"
+  !insertmacro IsShortcutTarget "$SMPROGRAMS\$AppStartMenuFolder${PRODUCTNAME}.lnk" "$INSTDIR\$OldMainBinaryName"
   Pop $0
   ${If} $0 = 1
-    !insertmacro SetShortcutTarget "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    !insertmacro SetShortcutTarget "$SMPROGRAMS\$AppStartMenuFolder${PRODUCTNAME}.lnk" "$INSTDIR${MAINBINARYNAME}.exe"
     StrCpy $R0 1
   ${EndIf}
 
-  !insertmacro IsShortcutTarget "$SMPROGRAMS\${PRODUCTNAME}.lnk" "$INSTDIR\$OldMainBinaryName"
+  !insertmacro IsShortcutTarget "$SMPROGRAMS${PRODUCTNAME}.lnk" "$INSTDIR\$OldMainBinaryName"
   Pop $0
   ${If} $0 = 1
-    !insertmacro SetShortcutTarget "$SMPROGRAMS\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    !insertmacro SetShortcutTarget "$SMPROGRAMS${PRODUCTNAME}.lnk" "$INSTDIR${MAINBINARYNAME}.exe"
     StrCpy $R0 1
   ${EndIf}
 
@@ -1111,21 +1111,21 @@ Function CreateOrUpdateStartMenuShortcut
 
   !if "${STARTMENUFOLDER}" != ""
     CreateDirectory "$SMPROGRAMS\$AppStartMenuFolder"
-    CreateShortcut "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
-    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk"
+    CreateShortcut "$SMPROGRAMS\$AppStartMenuFolder${PRODUCTNAME}.lnk" "$INSTDIR${MAINBINARYNAME}.exe"
+    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\$AppStartMenuFolder${PRODUCTNAME}.lnk"
   !else
-    CreateShortcut "$SMPROGRAMS\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
-    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\${PRODUCTNAME}.lnk"
+    CreateShortcut "$SMPROGRAMS${PRODUCTNAME}.lnk" "$INSTDIR${MAINBINARYNAME}.exe"
+    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS${PRODUCTNAME}.lnk"
   !endif
 FunctionEnd
 
 Function CreateOrUpdateDesktopShortcut
   ; We used to use product name as MAINBINARYNAME
   ; migrate old shortcuts to target the new MAINBINARYNAME
-  !insertmacro IsShortcutTarget "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\$OldMainBinaryName"
+  !insertmacro IsShortcutTarget "$DESKTOP${PRODUCTNAME}.lnk" "$INSTDIR\$OldMainBinaryName"
   Pop $0
   ${If} $0 = 1
-    !insertmacro SetShortcutTarget "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
+    !insertmacro SetShortcutTarget "$DESKTOP${PRODUCTNAME}.lnk" "$INSTDIR${MAINBINARYNAME}.exe"
     Return
   ${EndIf}
 
@@ -1138,6 +1138,6 @@ Function CreateOrUpdateDesktopShortcut
     ${EndIf}
   ${EndIf}
 
-  CreateShortcut "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe"
-  !insertmacro SetLnkAppUserModelId "$DESKTOP\${PRODUCTNAME}.lnk"
+  CreateShortcut "$DESKTOP${PRODUCTNAME}.lnk" "$INSTDIR${MAINBINARYNAME}.exe"
+  !insertmacro SetLnkAppUserModelId "$DESKTOP${PRODUCTNAME}.lnk"
 FunctionEnd
