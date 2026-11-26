@@ -153,7 +153,6 @@ internal sealed class InstallerForm : Form
                 if (input == null) throw new InvalidOperationException("O pacote interno de instalação não foi encontrado.");
                 using (FileStream output = File.Create(payload)) await input.CopyToAsync(output);
             }
-            Directory.CreateDirectory(installDir);
             string args = "/S /EMCUSTOM /EMFFMPEG=" + (ffmpeg.Checked ? "1" : "0") + " /EMWHISPER=" + (whisper.Checked ? "1" : "0") + " /D=\"" + installDir + "\"";
             ProcessStartInfo psi = new ProcessStartInfo(payload, args) { UseShellExecute = true, Verb = "runas" };
             using (Process p = Process.Start(psi)) { await System.Threading.Tasks.Task.Run(delegate { p.WaitForExit(); }); if (p.ExitCode != 0) throw new Exception("O mecanismo de instalação retornou o código " + p.ExitCode + "."); }
