@@ -46,8 +46,8 @@ test('translates the updated MP4 renderer limitations in both supported language
   );
 
   const note = 'Este curso descreve o comportamento da versão candidata. O instalador inclui FFmpeg/FFprobe e Whisper Tiny; a detecção automática desses recursos ainda precisa ser validada no Windows. A exportação MP4 aplica correções de cor, transformações estáticas e textos SRT/títulos; keyframes animados e composição em múltiplas camadas ainda não são renderizados. O atualizador pela internet também precisa ser implementado e validado antes do lançamento final.';
-  assert.match(translateText(note, 'en'), /MP4 export applies color adjustments and static transforms/);
-  assert.match(translateText(note, 'es'), /La exportación MP4 aplica ajustes de color y transformaciones estáticas/);
+  assert.match(translateText(note, 'en'), /MP4 export applies color adjustments, static transforms, and SRT\/title text/);
+  assert.match(translateText(note, 'es'), /La exportación MP4 aplica ajustes de color, transformaciones estáticas y texto SRT\/títulos/);
 });
 
 test('translates rendered subtitle export capabilities and remaining limitations', () => {
