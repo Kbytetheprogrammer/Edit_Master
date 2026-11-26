@@ -425,27 +425,27 @@ FunctionEnd
 Function EM_DirectoryPage
   nsDialogs::Create 1018
   Pop $0
-  \${If} $0 == error
+  ${If} $0 == error
     Abort
-  \${EndIf}
+  ${EndIf}
   SetCtlColors $0 "FFFFFF" "171717"
-  \${NSD_CreateLabel} 0u 0u 8u 300u ""
+  ${NSD_CreateLabel} 0u 0u 8u 300u ""
   Pop $1
   SetCtlColors $1 "FF7A00" "FF7A00"
-  \${NSD_CreateLabel} 28u 24u 450u 30u "Pasta de instalação"
+  ${NSD_CreateLabel} 28u 24u 450u 30u "Pasta de instalação"
   Pop $1
   CreateFont $2 "Segoe UI" 17 700
-  SendMessage $1 \${WM_SETFONT} $2 1
+  SendMessage $1 ${WM_SETFONT} $2 1
   SetCtlColors $1 "FF7A00" "171717"
-  \${NSD_CreateLabel} 30u 66u 450u 34u "Escolha onde o Edit Master será instalado."
+  ${NSD_CreateLabel} 30u 66u 450u 34u "Escolha onde o Edit Master será instalado."
   Pop $1
   SetCtlColors $1 "D0D0D0" "171717"
-  \${NSD_CreateText} 30u 116u 330u 22u "$INSTDIR"
+  ${NSD_CreateText} 30u 116u 330u 22u "$INSTDIR"
   Pop $EM_DirInput
-  \${NSD_CreateButton} 370u 115u 100u 24u "Procurar..."
+  ${NSD_CreateButton} 370u 115u 100u 24u "Procurar..."
   Pop $1
-  \${NSD_OnClick} $1 EM_BrowseDirectory
-  \${NSD_CreateLabel} 30u 166u 440u 42u "O aplicativo e os recursos selecionados serão instalados nesta pasta. Você poderá alterar a localização antes de continuar."
+  ${NSD_OnClick} $1 EM_BrowseDirectory
+  ${NSD_CreateLabel} 30u 166u 440u 42u "O aplicativo e os recursos selecionados serão instalados nesta pasta. Você poderá alterar a localização antes de continuar."
   Pop $1
   SetCtlColors $1 "AFAFAF" "171717"
   nsDialogs::Show
@@ -454,18 +454,18 @@ FunctionEnd
 Function EM_BrowseDirectory
   nsDialogs::SelectFolderDialog "Selecione a pasta de instalação" "$INSTDIR"
   Pop $0
-  \${If} $0 != error
-  \${AndIf} $0 != ""
-    \${NSD_SetText} $EM_DirInput "$0"
-  \${EndIf}
+  ${If} $0 != error
+  ${AndIf} $0 != ""
+    ${NSD_SetText} $EM_DirInput "$0"
+  ${EndIf}
 FunctionEnd
 
 Function EM_DirectoryLeave
-  \${NSD_GetText} $EM_DirInput $0
-  \${If} $0 == ""
+  ${NSD_GetText} $EM_DirInput $0
+  ${If} $0 == ""
     MessageBox MB_ICONEXCLAMATION "Informe uma pasta válida para continuar."
     Abort
-  \${EndIf}
+  ${EndIf}
   GetFullPathName $INSTDIR "$0"
 FunctionEnd
 
