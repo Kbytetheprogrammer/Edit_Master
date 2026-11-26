@@ -188,12 +188,18 @@ Page custom EM_ComponentsPage EM_ComponentsLeave
 
 ; 2. License Page (if defined)
 !if "${LICENSE}" != ""
+  !ifdef MUI_PAGE_CUSTOMFUNCTION_PRE
+    !undef MUI_PAGE_CUSTOMFUNCTION_PRE
+  !endif
   !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
   !insertmacro MUI_PAGE_LICENSE "${LICENSE}"
 !endif
 
 ; 3. Install mode (if it is set to `both`)
 !if "${INSTALLMODE}" == "both"
+  !ifdef MUI_PAGE_CUSTOMFUNCTION_PRE
+    !undef MUI_PAGE_CUSTOMFUNCTION_PRE
+  !endif
   !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
   !insertmacro MULTIUSER_PAGE_INSTALLMODE
 !endif
@@ -477,15 +483,9 @@ FunctionEnd
 ; 5. Choose install directory page
 Page custom EM_DirectoryPage EM_DirectoryLeave
 
-; 6. Start menu shortcut page
+; 6. Start menu folder is fixed to the branded Edit Master folder.
+; The generic MUI selection page is intentionally omitted.
 Var AppStartMenuFolder
-!if "${STARTMENUFOLDER}" != ""
-  !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
-  !define MUI_STARTMENUPAGE_DEFAULTFOLDER "${STARTMENUFOLDER}"
-!else
-  !define MUI_PAGE_CUSTOMFUNCTION_PRE Skip
-!endif
-!insertmacro MUI_PAGE_STARTMENU Application $AppStartMenuFolder
 
 ; 7. Installation page
 !insertmacro MUI_PAGE_INSTFILES
@@ -682,6 +682,7 @@ LangString choowHowToInstall 0 ""
 {{/each}}
 
 Function .onInit
+  StrCpy $AppStartMenuFolder "${STARTMENUFOLDER}"
   ${GetOptions} $CMDLINE "/P" $PassiveMode
   ${IfNot} ${Errors}
     StrCpy $PassiveMode 1
