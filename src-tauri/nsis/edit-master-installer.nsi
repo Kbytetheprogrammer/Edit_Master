@@ -433,7 +433,34 @@ Function PageLeaveReinstall
 FunctionEnd
 
 
+; Apply the Edit Master palette to the NSIS host window and navigation buttons.
+; The installer keeps NSIS installation/uninstallation logic, but its visible
+; navigation controls use the same dark/orange palette as the custom pages.
+Function EM_ApplyWindowTheme
+  Push $0
+  Push $1
+  Push $2
+  GetDlgItem $0 $HWNDPARENT 1
+  ${If} $0 != 0
+    System::Call 'uxtheme::SetWindowTheme(p r0, w "", w "")'
+    SetCtlColors $0 "171717" "FF7A00"
+    CreateFont $2 "Segoe UI" 9 600
+    SendMessage $0 ${WM_SETFONT} $2 1
+  ${EndIf}
+  GetDlgItem $1 $HWNDPARENT 2
+  ${If} $1 != 0
+    System::Call 'uxtheme::SetWindowTheme(p r1, w "", w "")'
+    SetCtlColors $1 "F2F2F2" "292929"
+    CreateFont $2 "Segoe UI" 9 400
+    SendMessage $1 ${WM_SETFONT} $2 1
+  ${EndIf}
+  Pop $2
+  Pop $1
+  Pop $0
+FunctionEnd
+
 Function EM_DirectoryPage
+  Call EM_ApplyWindowTheme
   nsDialogs::Create 1018
   Pop $0
   ${If} $0 == error
@@ -511,6 +538,7 @@ Page custom EM_FinishPage EM_FinishLeave
 
 
 Function EM_WelcomePage
+  Call EM_ApplyWindowTheme
   nsDialogs::Create 1018
   Pop $0
   ${If} $0 == error
@@ -544,6 +572,7 @@ Function EM_WelcomePage
 FunctionEnd
 
 Function EM_ComponentsPage
+  Call EM_ApplyWindowTheme
   nsDialogs::Create 1018
   Pop $0
   ${If} $0 == error
@@ -591,6 +620,7 @@ Function EM_ComponentsLeave
 FunctionEnd
 
 Function EM_FinishPage
+  Call EM_ApplyWindowTheme
   nsDialogs::Create 1018
   Pop $0
   ${If} $0 == error
