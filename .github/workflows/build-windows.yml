@@ -1,4 +1,4 @@
-name: Build Windows Setup
+name: Build Edit Master 1.0 Beta Oficial
 
 on:
   push:
@@ -117,7 +117,7 @@ jobs:
       - name: Upload Windows installer
         uses: actions/upload-artifact@v7
         with:
-          name: Edit-Master-Windows-Setup
+          name: Edit-Master-1.0-Beta-Oficial-Windows-Setup
           path: src-tauri/target/release/bundle/nsis/*-setup.exe
           if-no-files-found: error
           retention-days: 30
