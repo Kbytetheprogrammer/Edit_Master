@@ -31,7 +31,7 @@ internal sealed class InstallerForm : Form
         BackColor = bg;
         Font = new Font("Segoe UI", 10f);
         ShowInTaskbar = true;
-        try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+        try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
         Panel top = new Panel { Dock = DockStyle.Top, Height = 58, BackColor = Color.FromArgb(12,12,12) };
         top.MouseDown += DragWindow;
