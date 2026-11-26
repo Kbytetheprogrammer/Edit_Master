@@ -48,7 +48,28 @@ jobs:
           New-Item -ItemType Directory -Force -Path $ffmpegDir, $whisperDir | Out-Null
 
           $ffmpegZip = Join-Path $env:RUNNER_TEMP "ffmpeg.zip"
-          Invoke-WebRequest "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip" -OutFile $ffmpegZip
+          $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"
+          $downloaded = $false
+          for ($attempt = 1; $attempt -le 5; $attempt++) {
+            try {
+              Remove-Item $ffmpegZip -Force -ErrorAction SilentlyContinue
+              Write-Host "Downloading FFmpeg (attempt $attempt/5)..."
+              Invoke-WebRequest -Uri $ffmpegUrl -OutFile $ffmpegZip -TimeoutSec 180
+              if (-not (Test-Path $ffmpegZip) -or (Get-Item $ffmpegZip).Length -lt 1000000) { throw "FFmpeg download is missing or unexpectedly small." }
+              $stream = [System.IO.File]::OpenRead($ffmpegZip)
+              try {
+                $signature = New-Object byte[] 4
+                [void]$stream.Read($signature, 0, 4)
+              } finally { $stream.Dispose() }
+              if ($signature[0] -ne 0x50 -or $signature[1] -ne 0x4B) { throw "Downloaded response is not a ZIP archive (possible GitHub error page)." }
+              $downloaded = $true
+              break
+            } catch {
+              Write-Warning "FFmpeg download attempt $attempt failed: $($_.Exception.Message)"
+              if ($attempt -lt 5) { Start-Sleep -Seconds (10 * $attempt) }
+            }
+          }
+          if (-not $downloaded) { throw "Could not download a valid FFmpeg ZIP after 5 attempts." }
           $ffmpegExtract = Join-Path $env:RUNNER_TEMP "ffmpeg"
           Expand-Archive -Path $ffmpegZip -DestinationPath $ffmpegExtract -Force
           $ffmpegExe = Get-ChildItem $ffmpegExtract -Filter ffmpeg.exe -Recurse | Select-Object -First 1
