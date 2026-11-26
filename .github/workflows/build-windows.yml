@@ -104,7 +104,15 @@ jobs:
           New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
           $output = Join-Path $outputDir "Edit-Master-1.0-Beta-Oficial-Setup.exe"
           $icon = Join-Path $env:GITHUB_WORKSPACE "src-tauri/icons/icon-m.ico"
-          & $compiler /nologo /target:winexe /platform:x64 /optimize+ /out:$output /win32icon:$icon /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /resource:$($payload.FullName),EditMasterPayload.exe "installer/Bootstrapper.cs"
+          $bootstrapper = Join-Path $env:GITHUB_WORKSPACE "installer/Bootstrapper.cs"
+          Write-Host "Repository root: $env:GITHUB_WORKSPACE"
+          Write-Host "Bootstrapper source: $bootstrapper"
+          if (-not (Test-Path -LiteralPath $bootstrapper -PathType Leaf)) {
+            Write-Host "Installer directory contents:"
+            Get-ChildItem (Join-Path $env:GITHUB_WORKSPACE "installer") -Force | Format-Table FullName, Length
+            throw "Bootstrapper.cs is missing at installer/Bootstrapper.cs."
+          }
+          & $compiler /nologo /target:winexe /platform:x64 /optimize+ /out:$output /win32icon:$icon /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /resource:$($payload.FullName),EditMasterPayload.exe $bootstrapper
           if ($LASTEXITCODE -ne 0) { throw "Failed to compile the branded installer bootstrapper." }
           if (-not (Test-Path $output)) { throw "Standalone installer output was not created." }
           Write-Host "Standalone installer: $output"
