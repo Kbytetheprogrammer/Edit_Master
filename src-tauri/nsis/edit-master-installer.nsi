@@ -46,6 +46,12 @@ ${StrLoc}
 !include "{{installer_hooks}}"
 {{/if}}
 
+; Edit Master custom installer control variables
+Var EM_FfmpegCheck
+Var EM_WhisperCheck
+Var EM_OpenCheck
+Var EM_DirInput
+
 !define WEBVIEW2APPGUID "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
 
 !define MANUFACTURER "{{manufacturer}}"
@@ -502,11 +508,6 @@ Var AppStartMenuFolder
 Page custom EM_FinishPage EM_FinishLeave
 
 
-; Edit Master - original branded installer pages
-Var EM_FfmpegCheck
-Var EM_WhisperCheck
-Var EM_OpenCheck
-Var EM_DirInput
 
 Function EM_WelcomePage
   nsDialogs::Create 1018
