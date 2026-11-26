@@ -484,8 +484,12 @@ FunctionEnd
 Page custom EM_DirectoryPage EM_DirectoryLeave
 
 ; 6. Start menu folder is fixed to the branded Edit Master folder.
-; The generic MUI selection page is intentionally omitted.
+; Keep the MUI macro for its internal variable/registry setup, but always skip
+; its generic visual page so the user only sees Edit Master's custom screens.
 Var AppStartMenuFolder
+!define MUI_PAGE_CUSTOMFUNCTION_PRE Skip
+!define MUI_STARTMENUPAGE_DEFAULTFOLDER "${STARTMENUFOLDER}"
+!insertmacro MUI_PAGE_STARTMENU Application $AppStartMenuFolder
 
 ; 7. Installation page
 !insertmacro MUI_PAGE_INSTFILES
@@ -685,7 +689,6 @@ LangString choowHowToInstall 0 ""
 {{/each}}
 
 Function .onInit
-  StrCpy $AppStartMenuFolder "${STARTMENUFOLDER}"
   ${GetOptions} $CMDLINE "/P" $PassiveMode
   ${IfNot} ${Errors}
     StrCpy $PassiveMode 1
