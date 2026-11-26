@@ -723,6 +723,20 @@ LangString choowHowToInstall 0 ""
 {{/each}}
 
 Function .onInit
+  ; Read component choices passed by the Edit Master graphical bootstrapper.
+  ${GetOptions} $CMDLINE "/EMFFMPEG=" $EM_FfmpegSelected
+  ${IfNot} ${Errors}
+    StrCpy $EM_FfmpegSelected "1"
+  ${Else}
+    StrCpy $EM_FfmpegSelected "0"
+  ${EndIf}
+  ${GetOptions} $CMDLINE "/EMWHISPER=" $EM_WhisperSelected
+  ${IfNot} ${Errors}
+    StrCpy $EM_WhisperSelected "1"
+  ${Else}
+    StrCpy $EM_WhisperSelected "0"
+  ${EndIf}
+
   ${GetOptions} $CMDLINE "/P" $PassiveMode
   ${IfNot} ${Errors}
     StrCpy $PassiveMode 1
