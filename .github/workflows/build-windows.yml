@@ -92,6 +92,24 @@ jobs:
       - name: Build the NSIS installer
         run: npm run tauri:build
 
+      - name: Build standalone Edit Master installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $payload = Get-ChildItem "src-tauri/target/release/bundle/nsis" -Filter "*-setup.exe" | Select-Object -First 1
+          if (-not $payload) { throw "Tauri NSIS payload was not generated." }
+          $compiler = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+          if (-not (Test-Path $compiler)) { throw ".NET Framework C# compiler was not found: $compiler" }
+          $outputDir = Join-Path $env:GITHUB_WORKSPACE "installer-output"
+          New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
+          $output = Join-Path $outputDir "Edit-Master-1.0-Beta-Oficial-Setup.exe"
+          $icon = Join-Path $env:GITHUB_WORKSPACE "src-tauri/icons/icon-m.ico"
+          & $compiler /nologo /target:winexe /platform:x64 /optimize+ /out:$output /win32icon:$icon /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /resource:$($payload.FullName),EditMasterPayload.exe "installer/Bootstrapper.cs"
+          if ($LASTEXITCODE -ne 0) { throw "Failed to compile the branded installer bootstrapper." }
+          if (-not (Test-Path $output)) { throw "Standalone installer output was not created." }
+          Write-Host "Standalone installer: $output"
+          Write-Host ("Standalone installer size: {0:N1} MB" -f ((Get-Item $output).Length / 1MB))
+
       - name: Validate packaged frontend and installer
         shell: pwsh
         run: |
@@ -109,15 +127,15 @@ jobs:
             if (-not (Test-Path $assetPath)) { throw "Frontend asset referenced by index.html is missing: $asset -> $assetPath" }
             Write-Host "Verified frontend asset: $asset"
           }
-          $installer = Get-ChildItem "src-tauri/target/release/bundle/nsis" -Filter "*-setup.exe" | Select-Object -First 1
-          if (-not $installer) { throw "NSIS installer was not generated." }
-          Write-Host "Installer: $($installer.FullName)"
-          Write-Host "Installer size: $($installer.Length) bytes"
+          $installer = Join-Path $env:GITHUB_WORKSPACE "installer-output/Edit-Master-1.0-Beta-Oficial-Setup.exe"
+          if (-not (Test-Path $installer)) { throw "Standalone branded installer was not generated." }
+          Write-Host "Installer: $installer"
+          Write-Host "Installer size: $((Get-Item $installer).Length) bytes"
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@v7
         with:
           name: Edit-Master-1.0-Beta-Oficial-Windows-Setup
-          path: src-tauri/target/release/bundle/nsis/*-setup.exe
+          path: installer-output/Edit-Master-1.0-Beta-Oficial-Setup.exe
           if-no-files-found: error
           retention-days: 30
