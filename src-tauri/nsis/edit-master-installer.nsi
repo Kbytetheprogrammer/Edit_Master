@@ -94,7 +94,7 @@ Var WixMode
 Var OldMainBinaryName
 
 Name "${PRODUCTNAME}"
-BrandingText "${COPYRIGHT}"
+BrandingText " "
 OutFile "${OUTFILE}"
 
 ; We don't actually use this value as default install path,
@@ -530,7 +530,11 @@ Function EM_WelcomePage
   CreateFont $2 "Segoe UI" 13 400
   SendMessage $1 ${WM_SETFONT} $2 1
   SetCtlColors $1 "FFFFFF" "171717"
-  ${NSD_CreateLabel} 30u 126u 450u 54u "Um editor de vídeo leve, simples e pronto para criar. Este assistente vai instalar o Edit Master no seu computador."
+  ; Split the welcome copy into deliberate lines so it never clips in the NSIS page.
+  ${NSD_CreateLabel} 30u 126u 390u 22u "Um editor de vídeo leve, simples e pronto para criar."
+  Pop $1
+  SetCtlColors $1 "C9C9C9" "171717"
+  ${NSD_CreateLabel} 30u 151u 390u 22u "Este assistente vai instalar o Edit Master no seu computador."
   Pop $1
   SetCtlColors $1 "C9C9C9" "171717"
   ${NSD_CreateLabel} 30u 224u 450u 22u "EDIT MASTER 1.0 BETA OFICIAL  |  WINDOWS"
