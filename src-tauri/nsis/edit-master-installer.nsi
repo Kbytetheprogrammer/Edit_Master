@@ -476,7 +476,7 @@ Function EM_WelcomePage
   ${NSD_CreateLabel} 30u 126u 450u 54u "Um editor de vídeo leve, simples e pronto para criar. Este assistente vai instalar o Edit Master no seu computador."
   Pop $1
   SetCtlColors $1 "C9C9C9" "171717"
-  ${NSD_CreateLabel} 30u 224u 450u 22u "VERSÃO ${VERSION}  |  WINDOWS"
+  ${NSD_CreateLabel} 30u 224u 450u 22u "EDIT MASTER 1.0 BETA OFICIAL  |  WINDOWS"
   Pop $1
   SetCtlColors $1 "FF7A00" "171717"
   nsDialogs::Show
