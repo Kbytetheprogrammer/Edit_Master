@@ -23,6 +23,10 @@ ManifestDPIAwareness PerMonitorV2
 !include nsDialogs.nsh
 !define MUI_BGCOLOR "171717"
 !define MUI_TEXTCOLOR "F2F2F2"
+!define MUI_ABORTWARNING
+!define MUI_INSTFILESPAGE_COLORS "FF7A00" "171717"
+!define MUI_INSTFILESPAGE_FINISHHEADER_TEXT "Instalação concluída"
+!define MUI_INSTFILESPAGE_ABORTHEADER_TEXT "Instalação interrompida"
 !define MUI_HEADER_TRANSPARENT_TEXT
 !include FileFunc.nsh
 !include x64.nsh
@@ -415,9 +419,57 @@ Function PageLeaveReinstall
   reinst_done:
 FunctionEnd
 
+
+Function EM_DirectoryPage
+  nsDialogs::Create 1018
+  Pop $0
+  \${If} $0 == error
+    Abort
+  \${EndIf}
+  SetCtlColors $0 "FFFFFF" "171717"
+  \${NSD_CreateLabel} 0u 0u 8u 300u ""
+  Pop $1
+  SetCtlColors $1 "FF7A00" "FF7A00"
+  \${NSD_CreateLabel} 28u 24u 450u 30u "Pasta de instalação"
+  Pop $1
+  CreateFont $2 "Segoe UI" 17 700
+  SendMessage $1 \${WM_SETFONT} $2 1
+  SetCtlColors $1 "FF7A00" "171717"
+  \${NSD_CreateLabel} 30u 66u 450u 34u "Escolha onde o Edit Master será instalado."
+  Pop $1
+  SetCtlColors $1 "D0D0D0" "171717"
+  \${NSD_CreateText} 30u 116u 330u 22u "$INSTDIR"
+  Pop $EM_DirInput
+  \${NSD_CreateButton} 370u 115u 100u 24u "Procurar..."
+  Pop $1
+  \${NSD_OnClick} $1 EM_BrowseDirectory
+  \${NSD_CreateLabel} 30u 166u 440u 42u "O aplicativo e os recursos selecionados serão instalados nesta pasta. Você poderá alterar a localização antes de continuar."
+  Pop $1
+  SetCtlColors $1 "AFAFAF" "171717"
+  nsDialogs::Show
+FunctionEnd
+
+Function EM_BrowseDirectory
+  nsDialogs::SelectFolderDialog "Selecione a pasta de instalação" "$INSTDIR"
+  Pop $0
+  \${If} $0 != error
+  \${AndIf} $0 != ""
+    \${NSD_SetText} $EM_DirInput "$0"
+  \${EndIf}
+FunctionEnd
+
+Function EM_DirectoryLeave
+  \${NSD_GetText} $EM_DirInput $0
+  \${If} $0 == ""
+    MessageBox MB_ICONEXCLAMATION "Informe uma pasta válida para continuar."
+    Abort
+  \${EndIf}
+  GetFullPathName $INSTDIR "$0"
+FunctionEnd
+
 ; 5. Choose install directory page
 !define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
-!insertmacro MUI_PAGE_DIRECTORY
+Page custom EM_DirectoryPage EM_DirectoryLeave
 
 ; 6. Start menu shortcut page
 Var AppStartMenuFolder
@@ -452,6 +504,7 @@ Page custom EM_FinishPage EM_FinishLeave
 Var EM_FfmpegCheck
 Var EM_WhisperCheck
 Var EM_OpenCheck
+Var EM_DirInput
 
 Function EM_WelcomePage
   nsDialogs::Create 1018
@@ -559,7 +612,7 @@ FunctionEnd
 Function EM_FinishLeave
   ${NSD_GetState} $EM_OpenCheck $0
   ${If} $0 == ${BST_CHECKED}
-    nsis_tauri_utils::RunAsUser "$INSTDIR\\${MAINBINARYNAME}.exe" ""
+    nsis_tauri_utils::RunAsUser "$INSTDIR${MAINBINARYNAME}.exe" ""
   ${EndIf}
 FunctionEnd
 
