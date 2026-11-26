@@ -24,20 +24,22 @@ Function EM_ComponentsPage
 
   ${NSD_CreateCheckBox} 0 42u 100% 14u "Instalar FFmpeg + FFprobe"
   Pop $EM_FfmpegCheck
-  ${If} $EM_FfmpegSelected == "1"
-    ${NSD_Check} $EM_FfmpegCheck
-  ${Else}
+  ; Both optional tools are selected by default on a first installation.
+  ; A saved "0" is respected when the user returns to this page.
+  ${If} $EM_FfmpegSelected == "0"
     ${NSD_Uncheck} $EM_FfmpegCheck
+  ${Else}
+    ${NSD_Check} $EM_FfmpegCheck
   ${EndIf}
   ${NSD_CreateLabel} 18u 59u 92% 30u "Recomendado para exportar MP4, extrair áudio e processar vídeos no AI Hub."
   Pop $0
 
   ${NSD_CreateCheckBox} 0 105u 100% 14u "Instalar Whisper local (whisper.cpp + modelo Tiny)"
   Pop $EM_WhisperCheck
-  ${If} $EM_WhisperSelected == "1"
-    ${NSD_Check} $EM_WhisperCheck
-  ${Else}
+  ${If} $EM_WhisperSelected == "0"
     ${NSD_Uncheck} $EM_WhisperCheck
+  ${Else}
+    ${NSD_Check} $EM_WhisperCheck
   ${EndIf}
   ${NSD_CreateLabel} 18u 122u 92% 34u "Permite transcrever áudio offline. Requer FFmpeg para extrair áudio de vídeos."
   Pop $0
@@ -73,11 +75,12 @@ FunctionEnd
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
-  ; Tauri preserves the source resource directory below the bundle resource root.
+  ; With bundle.resources = ["resources/**/*"], Tauri preserves the
+  ; relative "resources/" prefix exactly once in the NSIS target paths.
   ${If} $EM_FfmpegSelected != "1"
-    RMDir /r "$INSTDIR\resources\resources\ffmpeg"
+    RMDir /r "$INSTDIR\resources\ffmpeg"
   ${EndIf}
   ${If} $EM_WhisperSelected != "1"
-    RMDir /r "$INSTDIR\resources\resources\whisper"
+    RMDir /r "$INSTDIR\resources\whisper"
   ${EndIf}
 !macroend
