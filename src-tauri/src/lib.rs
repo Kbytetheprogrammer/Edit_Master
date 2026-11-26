@@ -1450,15 +1450,6 @@ fn default_export_height() -> u32 { 1080 }
 fn default_export_fps() -> u32 { 60 }
 fn default_export_crf() -> u32 { 20 }
 
-fn srt_timestamp(seconds: f64) -> String {
-    let total_ms = (seconds.max(0.0) * 1000.0).round() as u64;
-    let hours = total_ms / 3_600_000;
-    let minutes = (total_ms / 60_000) % 60;
-    let seconds = (total_ms / 1_000) % 60;
-    let millis = total_ms % 1_000;
-    format!("{hours:02}:{minutes:02}:{seconds:02},{millis:03}")
-}
-
 fn build_export_subtitle_srt(
     subtitles: &[ProjectSubtitle],
     clips: &[&ExportClipInput],
