@@ -54,7 +54,8 @@
           "PortugueseBR",
           "English",
           "Spanish"
-        ]
+        ],
+        "template": "nsis/edit-master-installer.nsi"
       }
     }
   }
