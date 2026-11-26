@@ -8,10 +8,10 @@ Var EM_FfmpegSelected
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
-  \${If} $EM_FfmpegSelected != "1"
+  ${If} $EM_FfmpegSelected != "1"
     RMDir /r "$INSTDIR\resources\ffmpeg"
-  \${EndIf}
-  \${If} $EM_WhisperSelected != "1"
+  ${EndIf}
+  ${If} $EM_WhisperSelected != "1"
     RMDir /r "$INSTDIR\resources\whisper"
-  \${EndIf}
+  ${EndIf}
 !macroend
