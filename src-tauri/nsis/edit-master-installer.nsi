@@ -183,7 +183,6 @@ VIAddVersionKey "ProductVersion" "${VERSION}"
 
 ; Installer pages, must be ordered as they appear
 ; 1. Welcome Page
-!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
 Page custom EM_WelcomePage
 Page custom EM_ComponentsPage EM_ComponentsLeave
 
@@ -476,7 +475,6 @@ Function EM_DirectoryLeave
 FunctionEnd
 
 ; 5. Choose install directory page
-!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
 Page custom EM_DirectoryPage EM_DirectoryLeave
 
 ; 6. Start menu shortcut page
@@ -504,7 +502,6 @@ Var AppStartMenuFolder
 ; Show run app after installation.
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_FUNCTION RunMainBinary
-!define MUI_PAGE_CUSTOMFUNCTION_PRE SkipIfPassive
 Page custom EM_FinishPage EM_FinishLeave
 
 
