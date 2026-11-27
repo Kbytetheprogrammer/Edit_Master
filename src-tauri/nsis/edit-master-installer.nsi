@@ -1118,8 +1118,12 @@ Function un.onInit
 
   !insertmacro MUI_UNGETLANGUAGE
 
-  ; Always let the user choose the uninstaller language, just like the download setup.
-  !insertmacro MUI_UNLANGDLL_DISPLAY
+  ; Ask for the uninstaller language using NSIS LangDLL.
+  ; MUI_UNLANGDLL_DISPLAY is not a MUI2 macro and breaks makensis.
+  LangDLL::LangDialog "Edit Master - Language" "Choose the language for the uninstaller:"
+  Pop $LANGUAGE
+  StrCmp $LANGUAGE "cancel" 0 +2
+    Abort
 
   ${GetOptions} $CMDLINE "/P" $PassiveMode
   ${IfNot} ${Errors}
