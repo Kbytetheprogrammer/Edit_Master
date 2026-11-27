@@ -659,60 +659,115 @@ Function RunMainBinary
   nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" ""
 FunctionEnd
 
- ; Uninstaller Pages - Edit Master branded welcome and confirmation.
-!define MUI_UNWELCOMEPAGE_TITLE "Desinstalar o Edit Master"
-!define MUI_UNWELCOMEPAGE_TEXT "Este assistente vai remover o Edit Master deste computador.$\r$\n$\r$\nNa próxima etapa, você poderá escolher se deseja apagar também as configurações e os dados locais. Essa opção é opcional.$\r$\n$\r$\nSe você abriu esta tela por engano, basta cancelar."
-; 1. Welcome page
-!define MUI_PAGE_HEADER_TEXT "EDIT MASTER"
-!define MUI_PAGE_HEADER_SUBTEXT "Assistente de desinstalação"
-!insertmacro MUI_UNPAGE_WELCOME
-
-; 2. Confirm uninstall page
+ ; Uninstaller Pages - custom Edit Master UI matching the download setup.
 Var DeleteAppDataCheckbox
 Var DeleteAppDataCheckboxState
-!define /ifndef WS_EX_LAYOUTRTL         0x00400000
-!define MUI_PAGE_CUSTOMFUNCTION_SHOW un.ConfirmShow
-Function un.ConfirmShow ; Add add a `Delete app data` check box
-  ; $1 inner dialog HWND
-  ; $2 window DPI
-  ; $3 style
-  ; $4 x
-  ; $5 y
-  ; $6 width
-  ; $7 height
-  FindWindow $1 "#32770" "" $HWNDPARENT ; Find inner dialog
-  System::Call "user32::GetDpiForWindow(p r1) i .r2"
-  ${If} $(^RTL) = 1
-    StrCpy $3 "${__NSD_CheckBox_EXSTYLE} | ${WS_EX_LAYOUTRTL}"
-    IntOp $4 50 * $2
-  ${Else}
-    StrCpy $3 "${__NSD_CheckBox_EXSTYLE}"
-    IntOp $4 0 * $2
+
+UninstPage custom un.EM_UninstallWelcomePage un.EM_UninstallWelcomeLeave
+UninstPage custom un.EM_UninstallConfirmPage un.EM_UninstallConfirmLeave
+
+Function un.EM_ApplyWindowTheme
+  Push $0
+  Push $1
+  Push $2
+  GetDlgItem $0 $HWNDPARENT 1
+  ${If} $0 != 0
+    System::Call 'uxtheme::SetWindowTheme(p r0, w "", w "")'
+    SetCtlColors $0 "171717" "FF7A00"
+    CreateFont $2 "Segoe UI" 9 600
+    SendMessage $0 ${WM_SETFONT} $2 1
   ${EndIf}
-  IntOp $5 100 * $2
-  IntOp $6 400 * $2
-  IntOp $7 25 * $2
-  IntOp $4 $4 / 96
-  IntOp $5 $5 / 96
-  IntOp $6 $6 / 96
-  IntOp $7 $7 / 96
-  System::Call 'user32::CreateWindowEx(i r3, w "${__NSD_CheckBox_CLASS}", w "$(deleteAppData)", i ${__NSD_CheckBox_STYLE}, i r4, i r5, i r6, i r7, p r1, i0, i0, i0) i .s'
-  Pop $DeleteAppDataCheckbox
-  SendMessage $HWNDPARENT ${WM_GETFONT} 0 0 $1
-  SendMessage $DeleteAppDataCheckbox ${WM_SETFONT} $1 1
+  GetDlgItem $1 $HWNDPARENT 2
+  ${If} $1 != 0
+    System::Call 'uxtheme::SetWindowTheme(p r1, w "", w "")'
+    SetCtlColors $1 "F2F2F2" "292929"
+    CreateFont $2 "Segoe UI" 9 400
+    SendMessage $1 ${WM_SETFONT} $2 1
+  ${EndIf}
+  Pop $2
+  Pop $1
+  Pop $0
 FunctionEnd
-!define MUI_PAGE_CUSTOMFUNCTION_LEAVE un.ConfirmLeave
-Function un.ConfirmLeave
+
+Function un.EM_UninstallWelcomePage
+  Call un.EM_ApplyWindowTheme
+  SendMessage $HWNDPARENT ${WM_SETTEXT} 0 "Desinstalar Edit Master"
+  GetDlgItem $0 $HWNDPARENT 1
+  SendMessage $0 ${WM_SETTEXT} 0 "Continuar"
+  nsDialogs::Create 1018
+  Pop $0
+  ${If} $0 == error
+    Abort
+  ${EndIf}
+  SetCtlColors $0 "FFFFFF" "171717"
+  ${NSD_CreateLabel} 0u 0u 8u 300u ""
+  Pop $1
+  SetCtlColors $1 "FF7A00" "FF7A00"
+  ${NSD_CreateLabel} 28u 34u 450u 34u "EDIT MASTER"
+  Pop $1
+  CreateFont $2 "Segoe UI" 22 700
+  SendMessage $1 ${WM_SETFONT} $2 1
+  SetCtlColors $1 "FF7A00" "171717"
+  ${NSD_CreateLabel} 30u 88u 450u 30u "Assistente de desinstalação"
+  Pop $1
+  CreateFont $2 "Segoe UI" 14 600
+  SendMessage $1 ${WM_SETFONT} $2 1
+  SetCtlColors $1 "FFFFFF" "171717"
+  ${NSD_CreateLabel} 30u 134u 430u 42u "Este processo vai remover o Edit Master do seu computador."
+  Pop $1
+  SetCtlColors $1 "D0D0D0" "171717"
+  ${NSD_CreateLabel} 30u 196u 430u 38u "Na próxima etapa, você poderá escolher se deseja manter ou apagar os dados locais do aplicativo."
+  Pop $1
+  SetCtlColors $1 "AFAFAF" "171717"
+  ${NSD_CreateLabel} 30u 258u 450u 20u "EDIT MASTER 1.0 BETA  |  WINDOWS"
+  Pop $1
+  SetCtlColors $1 "FF7A00" "171717"
+  nsDialogs::Show
+FunctionEnd
+
+Function un.EM_UninstallWelcomeLeave
+FunctionEnd
+
+Function un.EM_UninstallConfirmPage
+  Call un.EM_ApplyWindowTheme
+  SendMessage $HWNDPARENT ${WM_SETTEXT} 0 "Confirmar desinstalação - Edit Master"
+  GetDlgItem $0 $HWNDPARENT 1
+  SendMessage $0 ${WM_SETTEXT} 0 "Desinstalar"
+  nsDialogs::Create 1018
+  Pop $0
+  ${If} $0 == error
+    Abort
+  ${EndIf}
+  SetCtlColors $0 "FFFFFF" "171717"
+  ${NSD_CreateLabel} 0u 0u 8u 300u ""
+  Pop $1
+  SetCtlColors $1 "FF7A00" "FF7A00"
+  ${NSD_CreateLabel} 28u 28u 450u 32u "CONFIRMAR REMOÇÃO"
+  Pop $1
+  CreateFont $2 "Segoe UI" 18 700
+  SendMessage $1 ${WM_SETFONT} $2 1
+  SetCtlColors $1 "FF7A00" "171717"
+  ${NSD_CreateLabel} 30u 78u 430u 42u "O Edit Master será removido. Essa ação não apaga seus vídeos originais."
+  Pop $1
+  SetCtlColors $1 "FFFFFF" "171717"
+  ${NSD_CreateCheckbox} 32u 146u 430u 34u "Também apagar configurações e dados locais do Edit Master"
+  Pop $DeleteAppDataCheckbox
+  SetCtlColors $DeleteAppDataCheckbox "FFFFFF" "171717"
+  SendMessage $DeleteAppDataCheckbox ${BM_SETCHECK} ${BST_UNCHECKED} 0
+  ${NSD_CreateLabel} 48u 190u 410u 48u "Se deixar esta opção desmarcada, suas preferências e dados locais serão mantidos para uma instalação futura."
+  Pop $1
+  SetCtlColors $1 "AFAFAF" "171717"
+  nsDialogs::Show
+FunctionEnd
+
+Function un.EM_UninstallConfirmLeave
   SendMessage $DeleteAppDataCheckbox ${BM_GETCHECK} 0 0 $DeleteAppDataCheckboxState
 FunctionEnd
-!ifdef MUI_PAGE_CUSTOMFUNCTION_PRE
-  !undef MUI_PAGE_CUSTOMFUNCTION_PRE
-!endif
-!define MUI_PAGE_CUSTOMFUNCTION_PRE un.SkipIfPassive
-!insertmacro MUI_UNPAGE_CONFIRM
 
-; 3. Uninstalling Page
+; Keep the progress page functional while applying the same dark/orange controls.
+!define MUI_PAGE_CUSTOMFUNCTION_SHOW un.EM_ApplyWindowTheme
 !insertmacro MUI_UNPAGE_INSTFILES
+!undef MUI_PAGE_CUSTOMFUNCTION_SHOW
 
 ;Languages
 ; PageReinstall reads the misspelled `choowHowToInstall` as a fallback, and makensis warns
