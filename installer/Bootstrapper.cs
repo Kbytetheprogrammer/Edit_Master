@@ -461,7 +461,7 @@ internal sealed class InstallerForm : Form
                 "/EMFFMPEG=" + (useFfmpeg ? "1" : "0") +
                 " /EMWHISPER=" + (useWhisper ? "1" : "0") +
                 " /EMMARKER=\"" + installMarker + "\"" +
-                " /D=\"" + installDir + "\"";
+                " /D=" + installDir; // NSIS /D= must be the final argument and its path must not be quoted; it consumes the remainder of the command line.
             ProcessStartInfo psi = new ProcessStartInfo(payload, args) { UseShellExecute = true, Verb = "runas" };
             using (Process p = Process.Start(psi)) {
                 await System.Threading.Tasks.Task.Run(delegate { p.WaitForExit(); });
