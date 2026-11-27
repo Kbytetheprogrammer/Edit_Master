@@ -4,28 +4,38 @@ using System.Drawing;
 using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 internal sealed class InstallerForm : Form
 {
     private readonly Color bg = Color.FromArgb(18, 18, 18);
-    private readonly Color panel = Color.FromArgb(28, 28, 28);
+    private readonly Color panel = Color.FromArgb(30, 30, 30);
     private readonly Color orange = Color.FromArgb(255, 122, 0);
-    private readonly Color muted = Color.FromArgb(175, 175, 175);
+    private readonly Color muted = Color.FromArgb(185, 185, 185);
     private Panel content;
     private Label title, subtitle, body, step;
     private Button back, next, cancel;
     private CheckBox ffmpeg, whisper, launch;
     private TextBox folder;
+    private ComboBox mediaDrive;
     private ProgressBar progress;
     private int page = 0;
     private string installDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Edit Master");
+    private string existingInstallDir = "";
+    private string existingMediaRoot = "";
+    private bool updateMode = false;
     private bool installing = false;
 
     public InstallerForm()
     {
+        existingInstallDir = FindExistingInstall();
+        existingMediaRoot = ReadMediaToolsRoot();
+        updateMode = !String.IsNullOrEmpty(existingInstallDir);
+        if (updateMode) installDir = existingInstallDir;
+
         Text = "Edit Master Setup";
-        Width = 760; Height = 510;
-        MinimumSize = new Size(700, 470);
+        Width = 800; Height = 560;
+        MinimumSize = new Size(760, 520);
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = bg;
@@ -33,29 +43,29 @@ internal sealed class InstallerForm : Form
         ShowInTaskbar = true;
         try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
-        Panel top = new Panel { Dock = DockStyle.Top, Height = 58, BackColor = Color.FromArgb(12,12,12) };
+        Panel top = new Panel { Dock = DockStyle.Top, Height = 62, BackColor = Color.FromArgb(12, 12, 12) };
         top.MouseDown += DragWindow;
-        Label mark = new Label { Text = "M", ForeColor = Color.Black, BackColor = orange, Font = new Font("Segoe UI", 19, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter, Bounds = new Rectangle(20, 10, 38, 38) };
+        Label mark = new Label { Text = "M", ForeColor = Color.Black, BackColor = orange, Font = new Font("Segoe UI", 19, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter, Bounds = new Rectangle(22, 11, 40, 40) };
         mark.MouseDown += DragWindow;
-        Label brand = new Label { Text = "EDIT MASTER", ForeColor = Color.White, Font = new Font("Segoe UI", 12, FontStyle.Bold), AutoSize = true, Location = new Point(72, 18) };
+        Label brand = new Label { Text = "EDIT MASTER", ForeColor = Color.White, Font = new Font("Segoe UI", 12, FontStyle.Bold), AutoSize = true, Location = new Point(76, 20) };
         brand.MouseDown += DragWindow;
-        Button close = MakeButton("×", false); close.Bounds = new Rectangle(Width - 52, 0, 52, 58); close.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+        Button close = MakeButton("×", false); close.Bounds = new Rectangle(Width - 54, 0, 54, 62); close.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         close.Click += delegate { if (!installing) Close(); };
         top.Controls.Add(mark); top.Controls.Add(brand); top.Controls.Add(close);
         Controls.Add(top);
 
-        Panel footer = new Panel { Dock = DockStyle.Bottom, Height = 76, BackColor = Color.FromArgb(14,14,14) };
-        step = new Label { ForeColor = muted, AutoSize = true, Location = new Point(26, 28), Text = "EDIT MASTER 1.0 BETA OFICIAL" };
-        back = MakeButton("VOLTAR", false); back.SetBounds(footer.Width - 330, 17, 94, 42); back.Anchor = AnchorStyles.Right | AnchorStyles.Top; back.Click += delegate { if (page > 0) ShowPage(page - 1); };
-        cancel = MakeButton("CANCELAR", false); cancel.SetBounds(footer.Width - 224, 17, 104, 42); cancel.Anchor = AnchorStyles.Right | AnchorStyles.Top; cancel.Click += delegate { if (!installing) Close(); };
-        next = MakeButton("PRÓXIMO", true); next.SetBounds(footer.Width - 108, 17, 88, 42); next.Anchor = AnchorStyles.Right | AnchorStyles.Top; next.Click += NextClicked;
+        Panel footer = new Panel { Dock = DockStyle.Bottom, Height = 78, BackColor = Color.FromArgb(14, 14, 14) };
+        step = new Label { ForeColor = muted, AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Location = new Point(26, 22), Size = new Size(190, 32), Text = "ETAPA 1 DE 3" };
+        back = MakeButton("VOLTAR", false); back.SetBounds(footer.Width - 348, 17, 96, 44); back.Anchor = AnchorStyles.Right | AnchorStyles.Top; back.Click += delegate { if (page > 0) ShowPage(page - 1); };
+        cancel = MakeButton("CANCELAR", false); cancel.SetBounds(footer.Width - 240, 17, 108, 44); cancel.Anchor = AnchorStyles.Right | AnchorStyles.Top; cancel.Click += delegate { if (!installing) Close(); };
+        next = MakeButton("COMEÇAR", true); next.SetBounds(footer.Width - 120, 17, 104, 44); next.Anchor = AnchorStyles.Right | AnchorStyles.Top; next.Click += NextClicked;
         footer.Controls.Add(step); footer.Controls.Add(back); footer.Controls.Add(cancel); footer.Controls.Add(next);
         Controls.Add(footer);
 
-        content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(30, 24, 30, 20), BackColor = bg };
-        title = new Label { ForeColor = orange, Font = new Font("Segoe UI", 24, FontStyle.Bold), AutoSize = true, Location = new Point(30, 28) };
-        subtitle = new Label { ForeColor = Color.White, Font = new Font("Segoe UI", 14), AutoSize = true, Location = new Point(32, 82) };
-        body = new Label { ForeColor = muted, Font = new Font("Segoe UI", 10), AutoSize = false, Location = new Point(32, 132), Size = new Size(620, 55) };
+        content = new Panel { Dock = DockStyle.Fill, Padding = new Padding(30, 22, 30, 18), BackColor = bg };
+        title = new Label { ForeColor = orange, Font = new Font("Segoe UI", 22, FontStyle.Bold), AutoSize = false, AutoEllipsis = true, TextAlign = ContentAlignment.MiddleLeft, Location = new Point(30, 20), Size = new Size(680, 42) };
+        subtitle = new Label { ForeColor = Color.White, Font = new Font("Segoe UI", 13, FontStyle.Regular), AutoSize = false, Location = new Point(32, 72), Size = new Size(670, 30) };
+        body = new Label { ForeColor = muted, Font = new Font("Segoe UI", 10), AutoSize = false, Location = new Point(32, 112), Size = new Size(670, 58) };
         content.Controls.Add(title); content.Controls.Add(subtitle); content.Controls.Add(body);
         Controls.Add(content);
         ShowPage(0);
@@ -63,10 +73,10 @@ internal sealed class InstallerForm : Form
 
     private Button MakeButton(string text, bool primary)
     {
-        Button b = new Button { Text = text, FlatStyle = FlatStyle.Flat, BackColor = primary ? orange : Color.FromArgb(43,43,43), ForeColor = primary ? Color.Black : Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand };
+        Button b = new Button { Text = text, FlatStyle = FlatStyle.Flat, BackColor = primary ? orange : Color.FromArgb(43, 43, 43), ForeColor = primary ? Color.Black : Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand };
         b.FlatAppearance.BorderSize = primary ? 0 : 1;
-        b.FlatAppearance.BorderColor = Color.FromArgb(75,75,75);
-        b.FlatAppearance.MouseOverBackColor = primary ? Color.FromArgb(255,145,40) : Color.FromArgb(58,58,58);
+        b.FlatAppearance.BorderColor = Color.FromArgb(75, 75, 75);
+        b.FlatAppearance.MouseOverBackColor = primary ? Color.FromArgb(255, 145, 40) : Color.FromArgb(58, 58, 58);
         return b;
     }
 
@@ -77,56 +87,172 @@ internal sealed class InstallerForm : Form
     [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool ReleaseCapture();
     [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
 
+    private string FindExistingInstall()
+    {
+        string[] roots = new string[] {
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+        };
+        RegistryKey[] hives = new RegistryKey[] { Registry.LocalMachine, Registry.CurrentUser };
+        foreach (RegistryKey hive in hives)
+        {
+            foreach (string root in roots)
+            {
+                try {
+                    using (RegistryKey parent = hive.OpenSubKey(root)) {
+                        if (parent == null) continue;
+                        foreach (string name in parent.GetSubKeyNames()) {
+                            using (RegistryKey item = parent.OpenSubKey(name)) {
+                                if (item == null) continue;
+                                string display = Convert.ToString(item.GetValue("DisplayName", ""));
+                                string location = Convert.ToString(item.GetValue("InstallLocation", ""));
+                                if (display.IndexOf("Edit Master", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                                    !String.IsNullOrWhiteSpace(location) &&
+                                    File.Exists(Path.Combine(location, "Edit Master.exe"))) return location;
+                            }
+                        }
+                    }
+                } catch { }
+            }
+            try {
+                using (RegistryKey item = hive.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\UninstallEdit Master")) {
+                    if (item != null) {
+                        string location = Convert.ToString(item.GetValue("InstallLocation", ""));
+                        if (!String.IsNullOrWhiteSpace(location) && File.Exists(Path.Combine(location, "Edit Master.exe"))) return location;
+                    }
+                }
+            } catch { }
+        }
+        string programFiles = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Edit Master");
+        if (File.Exists(Path.Combine(programFiles, "Edit Master.exe"))) return programFiles;
+        return "";
+    }
+
+    private string ReadMediaToolsRoot()
+    {
+        try {
+            string file = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Edit Master", "MediaTools.ini");
+            if (!File.Exists(file)) return "";
+            foreach (string line in File.ReadAllLines(file)) {
+                if (line.StartsWith("Path=", StringComparison.OrdinalIgnoreCase)) return line.Substring(5).Trim();
+            }
+        } catch { }
+        return "";
+    }
+
     private void ResetContent()
     {
         for (int i = content.Controls.Count - 1; i >= 3; i--) content.Controls.RemoveAt(i);
         progress = null;
     }
+
+    private void AddCardLabel(Panel card, string heading, string description, int y)
+    {
+        Label h = new Label { Text = heading, ForeColor = Color.White, Font = new Font("Segoe UI", 11, FontStyle.Bold), AutoSize = true, Location = new Point(58, y + 7) };
+        Label d = new Label { Text = description, ForeColor = muted, Font = new Font("Segoe UI", 9), AutoSize = true, Location = new Point(58, y + 31) };
+        card.Controls.Add(h); card.Controls.Add(d);
+    }
+
     private void ShowPage(int index)
     {
         page = index; ResetContent();
         back.Visible = page > 0 && page < 3;
+        cancel.Visible = page < 3;
         next.Visible = page != 3;
-        next.Text = page == 2 ? "INSTALAR" : page == 4 ? "CONCLUIR" : "PRÓXIMO";
-        step.Text = "ETAPA " + Math.Min(page + 1, 4) + " DE 4  •  EDIT MASTER 1.0 BETA OFICIAL";
+        next.Text = page == 0 ? (updateMode ? "ATUALIZAR" : "COMEÇAR") : page == 1 ? "CONTINUAR" : page == 2 ? (updateMode ? "ATUALIZAR" : "INSTALAR") : "CONCLUIR";
+        step.Text = page < 3 ? "ETAPA " + (page + 1) + " DE 3" : page == 3 ? "PREPARANDO" : "CONCLUÍDO";
+
         if (page == 0) {
-            title.Text = "Seu próximo projeto começa aqui.";
-            subtitle.Text = "EDIT MASTER 1.0 BETA OFICIAL";
-            body.Text = "Um editor de vídeo leve, simples e pronto para criar.\r\nEste assistente vai instalar o Edit Master no seu computador.";
+            title.Text = updateMode ? "Vamos atualizar seu Edit Master." : "Seu próximo projeto começa aqui.";
+            subtitle.Text = updateMode ? "Encontramos uma instalação existente." : "EDIT MASTER 1.0 BETA OFICIAL";
+            body.Text = updateMode
+                ? "Vamos substituir os arquivos do aplicativo pela nova versão, mantendo a mesma pasta e os componentes escolhidos. Seus projetos e preferências serão preservados."
+                : "Um editor de vídeo leve, simples e pronto para criar.\r\nEste assistente vai preparar tudo para você.";
+            if (updateMode) {
+                Panel info = new Panel { BackColor = panel, Bounds = new Rectangle(32, 205, 670, 82) };
+                Label accent = new Label { BackColor = orange, Bounds = new Rectangle(0, 0, 5, 82) };
+                Label heading = new Label { Text = "ATUALIZAÇÃO DISPONÍVEL", ForeColor = orange, Font = new Font("Segoe UI", 9, FontStyle.Bold), AutoSize = true, Location = new Point(22, 15) };
+                Label path = new Label { Text = installDir, ForeColor = Color.White, Font = new Font("Segoe UI", 9), AutoSize = false, AutoEllipsis = true, Location = new Point(22, 40), Size = new Size(625, 24) };
+                info.Controls.Add(accent); info.Controls.Add(heading); info.Controls.Add(path); content.Controls.Add(info);
+            }
         } else if (page == 1) {
-            title.Text = "Componentes opcionais";
-            subtitle.Text = "Escolha os recursos adicionais";
-            body.Text = "Você pode instalar esses componentes agora ou adicioná-los posteriormente.";
-            ffmpeg = new CheckBox { Text = "FFmpeg + FFprobe", Checked = true, ForeColor = Color.White, BackColor = bg, AutoSize = true, Location = new Point(34, 210), Font = new Font("Segoe UI", 12, FontStyle.Bold) };
-            Label fdesc = new Label { Text = "Exportação, processamento e conversão de mídia", ForeColor = muted, AutoSize = true, Location = new Point(60, 242) };
-            whisper = new CheckBox { Text = "Whisper.cpp + modelo Tiny", Checked = true, ForeColor = Color.White, BackColor = bg, AutoSize = true, Location = new Point(34, 290), Font = new Font("Segoe UI", 12, FontStyle.Bold) };
-            Label wdesc = new Label { Text = "Transcrição local de áudio para legendas", ForeColor = muted, AutoSize = true, Location = new Point(60, 322) };
-            content.Controls.Add(ffmpeg); content.Controls.Add(fdesc); content.Controls.Add(whisper); content.Controls.Add(wdesc);
+            title.Text = "Escolha seus recursos.";
+            subtitle.Text = "O que você quer ter instalado?";
+            body.Text = "FFmpeg e Whisper podem ficar fora do SSD do sistema. Escolha uma unidade com espaço livre; os dois ficarão juntos nela.";
+            ffmpeg = new CheckBox { Text = "FFmpeg + FFprobe", Checked = updateMode ? ExistingComponent("ffmpeg") : true, ForeColor = Color.White, BackColor = panel, AutoSize = true, Location = new Point(18, 12), Font = new Font("Segoe UI", 11, FontStyle.Bold) };
+            whisper = new CheckBox { Text = "Whisper.cpp + modelo Tiny", Checked = updateMode ? ExistingComponent("whisper") : true, ForeColor = Color.White, BackColor = panel, AutoSize = true, Location = new Point(18, 12), Font = new Font("Segoe UI", 11, FontStyle.Bold) };
+            Panel fcard = new Panel { BackColor = panel, Bounds = new Rectangle(32, 180, 670, 62) };
+            ffmpeg.Location = new Point(18, 6); fcard.Controls.Add(ffmpeg);
+            Label fdesc = new Label { Text = "Exportação, conversão e processamento de mídia", ForeColor = muted, AutoSize = true, Location = new Point(42, 34) }; fcard.Controls.Add(fdesc);
+            Panel wcard = new Panel { BackColor = panel, Bounds = new Rectangle(32, 250, 670, 62) };
+            whisper.Location = new Point(18, 6); wcard.Controls.Add(whisper);
+            Label wdesc = new Label { Text = "Legendas automáticas com transcrição local e offline", ForeColor = muted, AutoSize = true, Location = new Point(42, 34) }; wcard.Controls.Add(wdesc);
+            Label driveLabel = new Label { Text = "UNIDADE PARA OS COMPONENTES", ForeColor = orange, Font = new Font("Segoe UI", 9, FontStyle.Bold), AutoSize = true, Location = new Point(34, 326) };
+            mediaDrive = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(38, 38, 38), ForeColor = Color.White, Font = new Font("Segoe UI", 10), Location = new Point(34, 350), Width = 360, Height = 30 };
+            PopulateDrives();
+            ffmpeg.CheckedChanged += ComponentsChanged; whisper.CheckedChanged += ComponentsChanged;
+            content.Controls.Add(fcard); content.Controls.Add(wcard); content.Controls.Add(driveLabel); content.Controls.Add(mediaDrive);
         } else if (page == 2) {
-            title.Text = "Local de instalação";
-            subtitle.Text = "Onde deseja instalar o Edit Master?";
-            body.Text = "O aplicativo será instalado na pasta selecionada abaixo.";
-            folder = new TextBox { Text = installDir, BackColor = Color.FromArgb(38,38,38), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Font = new Font("Segoe UI", 11), Location = new Point(34, 218), Width = 500, Height = 32 };
-            Button browse = MakeButton("PROCURAR", false); browse.SetBounds(548, 214, 112, 38);
+            title.Text = updateMode ? "Tudo pronto para atualizar." : "Onde instalar o aplicativo?";
+            subtitle.Text = updateMode ? "Vamos manter a pasta atual do Edit Master." : "Escolha a pasta do Edit Master.";
+            body.Text = updateMode ? "A localização atual será mantida para que a atualização substitua os arquivos sem criar outra instalação." : "Os componentes opcionais serão guardados na unidade escolhida na etapa anterior.";
+            folder = new TextBox { Text = installDir, BackColor = Color.FromArgb(38, 38, 38), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Font = new Font("Segoe UI", 10), Location = new Point(34, 218), Width = 510, Height = 34, ReadOnly = updateMode };
+            Button browse = MakeButton("PROCURAR", false); browse.SetBounds(556, 215, 112, 40); browse.Enabled = !updateMode;
             browse.Click += delegate { using (FolderBrowserDialog d = new FolderBrowserDialog()) { d.SelectedPath = folder.Text; d.Description = "Selecione a pasta de instalação do Edit Master"; if (d.ShowDialog(this) == DialogResult.OK) folder.Text = d.SelectedPath; } };
             content.Controls.Add(folder); content.Controls.Add(browse);
         } else if (page == 3) {
-            title.Text = "Instalando o Edit Master";
-            subtitle.Text = "Isso pode levar alguns minutos.";
-            body.Text = "Preparando os arquivos e configurando o aplicativo. Não feche esta janela.";
-            progress = new ProgressBar { Style = ProgressBarStyle.Marquee, MarqueeAnimationSpeed = 28, Location = new Point(34, 230), Width = 620, Height = 18 };
+            title.Text = updateMode ? "Atualizando o Edit Master" : "Instalando o Edit Master";
+            subtitle.Text = "Só mais um momento.";
+            body.Text = "Estamos organizando os arquivos e configurando seus componentes. Não feche esta janela.";
+            progress = new ProgressBar { Style = ProgressBarStyle.Marquee, MarqueeAnimationSpeed = 28, Location = new Point(34, 230), Width = 660, Height = 18 };
             content.Controls.Add(progress);
             back.Visible = false; cancel.Visible = false; next.Visible = false;
             installing = true;
             BeginInstall();
         } else {
-            title.Text = "Instalação concluída!";
-            subtitle.Text = "O Edit Master está pronto para uso.";
-            body.Text = "A instalação foi concluída. Você já pode começar seu próximo projeto.";
+            title.Text = updateMode ? "Atualização concluída!" : "Instalação concluída!";
+            subtitle.Text = "O Edit Master está pronto para você.";
+            body.Text = "Tudo certo! Seus componentes foram organizados na unidade escolhida e o aplicativo está pronto para abrir.";
             launch = new CheckBox { Text = "Abrir Edit Master agora", Checked = true, ForeColor = Color.White, BackColor = bg, AutoSize = true, Location = new Point(34, 230), Font = new Font("Segoe UI", 11, FontStyle.Bold) };
             content.Controls.Add(launch);
             back.Visible = false; cancel.Visible = false; next.Visible = true; next.Text = "CONCLUIR";
         }
+    }
+
+    private bool ExistingComponent(string name)
+    {
+        if (!String.IsNullOrEmpty(existingMediaRoot) && Directory.Exists(Path.Combine(existingMediaRoot, name))) return true;
+        return !String.IsNullOrEmpty(existingInstallDir) && Directory.Exists(Path.Combine(existingInstallDir, "resources", name));
+    }
+
+    private void PopulateDrives()
+    {
+        if (mediaDrive == null) return;
+        string preferred = !String.IsNullOrEmpty(existingMediaRoot) ? Path.GetPathRoot(existingMediaRoot) : Path.GetPathRoot(installDir);
+        foreach (DriveInfo drive in DriveInfo.GetDrives()) {
+            try {
+                if (!drive.IsReady || drive.DriveType != DriveType.Fixed) continue;
+                double free = drive.AvailableFreeSpace / 1073741824.0;
+                string item = drive.Name + " | " + free.ToString("0.0") + " GB livres";
+                int idx = mediaDrive.Items.Add(item);
+                if (String.Equals(drive.Name, preferred, StringComparison.OrdinalIgnoreCase)) mediaDrive.SelectedIndex = idx;
+            } catch { }
+        }
+        if (mediaDrive.Items.Count > 0 && mediaDrive.SelectedIndex < 0) mediaDrive.SelectedIndex = 0;
+        mediaDrive.Enabled = ffmpeg.Checked || whisper.Checked;
+    }
+
+    private void ComponentsChanged(object sender, EventArgs e)
+    {
+        if (mediaDrive != null) mediaDrive.Enabled = ffmpeg.Checked || whisper.Checked;
+    }
+
+    private string SelectedMediaRoot()
+    {
+        if (mediaDrive == null || mediaDrive.SelectedIndex < 0) return "";
+        string item = mediaDrive.SelectedItem.ToString();
+        string drive = item.Substring(0, 3);
+        return Path.Combine(drive, "Edit Master", "MediaTools");
     }
 
     private void NextClicked(object sender, EventArgs e)
@@ -134,6 +260,10 @@ internal sealed class InstallerForm : Form
         if (page == 2) {
             if (String.IsNullOrWhiteSpace(folder.Text)) { MessageBox.Show(this, "Escolha uma pasta válida.", "Edit Master", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             installDir = folder.Text.Trim();
+            if (ffmpeg.Checked || whisper.Checked) {
+                string root = SelectedMediaRoot();
+                if (String.IsNullOrEmpty(root)) { MessageBox.Show(this, "Selecione uma unidade disponível para os componentes.", "Edit Master", MessageBoxButtons.OK, MessageBoxIcon.Warning); ShowPage(1); return; }
+            }
         }
         if (page == 4) {
             bool run = launch != null && launch.Checked;
@@ -145,17 +275,71 @@ internal sealed class InstallerForm : Form
         ShowPage(page + 1);
     }
 
+    private void CopyDirectory(string source, string destination)
+    {
+        Directory.CreateDirectory(destination);
+        foreach (string file in Directory.GetFiles(source)) {
+            string target = Path.Combine(destination, Path.GetFileName(file));
+            File.Copy(file, target, true);
+        }
+        foreach (string directory in Directory.GetDirectories(source)) {
+            CopyDirectory(directory, Path.Combine(destination, Path.GetFileName(directory)));
+        }
+    }
+
+    private void FinalizeMediaTools(bool useFfmpeg, bool useWhisper, string destinationRoot, string previousRoot)
+    {
+        string resources = Path.Combine(installDir, "resources");
+        string ffmpegSource = Path.Combine(resources, "ffmpeg");
+        string whisperSource = Path.Combine(resources, "whisper");
+        if (useFfmpeg || useWhisper) {
+            if (Directory.Exists(destinationRoot)) Directory.Delete(destinationRoot, true);
+            Directory.CreateDirectory(destinationRoot);
+            if (useFfmpeg) {
+                if (!Directory.Exists(ffmpegSource)) throw new Exception("Os arquivos do FFmpeg não foram encontrados no pacote de instalação.");
+                CopyDirectory(ffmpegSource, Path.Combine(destinationRoot, "ffmpeg"));
+            }
+            if (useWhisper) {
+                if (!Directory.Exists(whisperSource)) throw new Exception("Os arquivos do Whisper não foram encontrados no pacote de instalação.");
+                CopyDirectory(whisperSource, Path.Combine(destinationRoot, "whisper"));
+            }
+            string common = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Edit Master");
+            Directory.CreateDirectory(common);
+            File.WriteAllText(Path.Combine(common, "MediaTools.ini"), "[MediaTools]\r\nPath=" + destinationRoot + "\r\n");
+        } else {
+            if (!String.IsNullOrEmpty(previousRoot) && Directory.Exists(previousRoot)) Directory.Delete(previousRoot, true);
+            string config = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Edit Master", "MediaTools.ini");
+            if (File.Exists(config)) File.Delete(config);
+        }
+        if (Directory.Exists(ffmpegSource)) Directory.Delete(ffmpegSource, true);
+        if (Directory.Exists(whisperSource)) Directory.Delete(whisperSource, true);
+        if (!String.IsNullOrEmpty(previousRoot) && !String.Equals(Path.GetFullPath(previousRoot).TrimEnd('\\'), Path.GetFullPath(destinationRoot).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase) && Directory.Exists(previousRoot))
+            Directory.Delete(previousRoot, true);
+    }
+
     private async void BeginInstall()
     {
+        bool useFfmpeg = ffmpeg.Checked;
+        bool useWhisper = whisper.Checked;
+        string destinationRoot = (useFfmpeg || useWhisper) ? SelectedMediaRoot() : "";
+        string previousRoot = existingMediaRoot;
         try {
             string payload = Path.Combine(Path.GetTempPath(), "EditMasterSetup-" + Guid.NewGuid().ToString("N") + ".exe");
             using (Stream input = Assembly.GetExecutingAssembly().GetManifestResourceStream("EditMasterPayload.exe")) {
                 if (input == null) throw new InvalidOperationException("O pacote interno de instalação não foi encontrado.");
                 using (FileStream output = File.Create(payload)) await input.CopyToAsync(output);
             }
-            string args = "/S /EMCUSTOM /EMFFMPEG=" + (ffmpeg.Checked ? "1" : "0") + " /EMWHISPER=" + (whisper.Checked ? "1" : "0") + " /D=\"" + installDir + "\"";
+            string args = "/S " + (updateMode ? "/UPDATE " : "") +
+                "/EMFFMPEG=" + (useFfmpeg ? "1" : "0") +
+                " /EMWHISPER=" + (useWhisper ? "1" : "0") +
+                " /D=\"" + installDir + "\"";
             ProcessStartInfo psi = new ProcessStartInfo(payload, args) { UseShellExecute = true, Verb = "runas" };
-            using (Process p = Process.Start(psi)) { await System.Threading.Tasks.Task.Run(delegate { p.WaitForExit(); }); if (p.ExitCode != 0) throw new Exception("O mecanismo de instalação retornou o código " + p.ExitCode + "."); }
+            using (Process p = Process.Start(psi)) {
+                await System.Threading.Tasks.Task.Run(delegate { p.WaitForExit(); });
+                if (p.ExitCode != 0) throw new Exception("O mecanismo de instalação retornou o código " + p.ExitCode + ".");
+            }
+            if (useFfmpeg || useWhisper) FinalizeMediaTools(useFfmpeg, useWhisper, destinationRoot, previousRoot);
+            else FinalizeMediaTools(false, false, "", previousRoot);
             try { File.Delete(payload); } catch { }
             installing = false;
             ShowPage(4);
