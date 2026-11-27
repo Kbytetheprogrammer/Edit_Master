@@ -75,8 +75,17 @@ jobs:
           $ffmpegExe = Get-ChildItem $ffmpegExtract -Filter ffmpeg.exe -Recurse | Select-Object -First 1
           $ffprobeExe = Get-ChildItem $ffmpegExtract -Filter ffprobe.exe -Recurse | Select-Object -First 1
           if (-not $ffmpegExe -or -not $ffprobeExe) { throw "FFmpeg/FFprobe não encontrados no pacote baixado." }
-          Copy-Item $ffmpegExe.FullName (Join-Path $ffmpegDir "ffmpeg.exe") -Force
-          Copy-Item $ffprobeExe.FullName (Join-Path $ffmpegDir "ffprobe.exe") -Force
+          # Keep the complete FFmpeg bin payload, not only the two EXEs.
+          # Some Windows builds require adjacent DLLs at runtime.
+          Get-ChildItem -LiteralPath $ffmpegExe.DirectoryName -File | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination $ffmpegDir -Force
+          }
+          if (-not (Test-Path (Join-Path $ffmpegDir "ffmpeg.exe")) -or
+              -not (Test-Path (Join-Path $ffmpegDir "ffprobe.exe"))) {
+            throw "FFmpeg/FFprobe were not copied into src-tauri/resources/ffmpeg."
+          }
+          Write-Host "Bundled FFmpeg payload:"
+          Get-ChildItem -LiteralPath $ffmpegDir -File | Select-Object Name, Length | Format-Table
 
           # Check the actual filter entry and its libass description. Print diagnostics on failure.
           $ffmpegFilters = (& (Join-Path $ffmpegDir "ffmpeg.exe") -hide_banner -filters 2>&1 | Out-String)
