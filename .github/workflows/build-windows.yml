@@ -122,6 +122,25 @@ jobs:
       - name: Build the NSIS installer
         run: npm run tauri:build
 
+      - name: Verify FFmpeg resources are included in the NSIS payload
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $nsisRoot = Join-Path $env:GITHUB_WORKSPACE "src-tauri/target/release/nsis"
+          $scripts = Get-ChildItem -LiteralPath $nsisRoot -Filter "installer.nsi" -Recurse -File
+          if (-not $scripts) { throw "Generated NSIS installer script was not found: $nsisRoot" }
+          $allScriptText = ($scripts | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
+          $ffmpegEntries = [regex]::Matches($allScriptText, '(?im)^\\s*File\\b[^\\r\\n]*ffmpeg\\.exe')
+          $ffprobeEntries = [regex]::Matches($allScriptText, '(?im)^\\s*File\\b[^\\r\\n]*ffprobe\\.exe')
+          Write-Host "Generated NSIS scripts:"
+          $scripts | ForEach-Object { Write-Host $_.FullName }
+          if ($ffmpegEntries.Count -lt 1 -or $ffprobeEntries.Count -lt 1) {
+            Write-Host "FFmpeg-related entries found in generated NSIS scripts:"
+            ($allScriptText -split "`r?`n" | Where-Object { $_ -match '(?i)ffmpeg|ffprobe' }) | ForEach-Object { Write-Host $_ }
+            throw "FFmpeg/FFprobe are present in the build workspace but are not being embedded as NSIS File entries."
+          }
+          Write-Host "Verified NSIS embeds ffmpeg.exe and ffprobe.exe."
+
       - name: Build standalone Edit Master installer
         shell: pwsh
         run: |
