@@ -57,15 +57,19 @@ function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = []
     let cancelled = false;
     invoke('get_bundled_media_tools').then(tools => {
       if (cancelled || !tools) return;
-      if (tools.whisperExecutable && !safeStorageGet(WHISPER_EXE_KEY)) {
+      const savedWhisperExe = safeStorageGet(WHISPER_EXE_KEY);
+      const savedWhisperModel = safeStorageGet(WHISPER_MODEL_KEY);
+      const savedFfmpeg = safeStorageGet(FFMPEG_KEY);
+      const installerManaged = path => path && /[\\/]resources[\\/](whisper|ffmpeg)[\\/]|[\\/]Edit Master[\\/]MediaTools[\\/](whisper|ffmpeg)[\\/]/i.test(path);
+      if (tools.whisperExecutable && (!savedWhisperExe || installerManaged(savedWhisperExe))) {
         setWhisperExecutable(tools.whisperExecutable);
         safeStorageSet(WHISPER_EXE_KEY, tools.whisperExecutable);
       }
-      if (tools.whisperModelPath && !safeStorageGet(WHISPER_MODEL_KEY)) {
+      if (tools.whisperModelPath && (!savedWhisperModel || installerManaged(savedWhisperModel))) {
         setWhisperModel(tools.whisperModelPath);
         safeStorageSet(WHISPER_MODEL_KEY, tools.whisperModelPath);
       }
-      if (tools.ffmpegPath && !safeStorageGet(FFMPEG_KEY)) {
+      if (tools.ffmpegPath && (!savedFfmpeg || installerManaged(savedFfmpeg))) {
         setFfmpegPath(tools.ffmpegPath);
         safeStorageSet(FFMPEG_KEY, tools.ffmpegPath);
       }
