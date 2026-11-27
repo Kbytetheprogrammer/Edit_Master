@@ -26,6 +26,8 @@ internal sealed class InstallerForm : Form
     private string existingMediaRoot = "";
     private bool updateMode = false;
     private bool installing = false;
+    private ComboBox languagePicker;
+    private int language = 0;
 
     public InstallerForm()
     {
@@ -55,13 +57,24 @@ internal sealed class InstallerForm : Form
         top.Controls.Add(mark); top.Controls.Add(brand); top.Controls.Add(close);
         Panel headerAccent = new Panel { Dock = DockStyle.Bottom, Height = 3, BackColor = orange };
         top.Controls.Add(headerAccent);
+        languagePicker = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(38, 38, 38), ForeColor = Color.White, Font = new Font("Segoe UI", 9), Location = new Point(570, 17), Size = new Size(170, 30), Anchor = AnchorStyles.Top | AnchorStyles.Right };
+        languagePicker.Items.AddRange(new object[] { "Português", "English", "Español" });
+        string culture = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        language = culture == "en" ? 1 : culture == "es" ? 2 : 0;
+        languagePicker.SelectedIndex = language;
+        languagePicker.SelectedIndexChanged += delegate {
+            if (languagePicker.SelectedIndex < 0) return;
+            language = languagePicker.SelectedIndex;
+            if (!installing) ShowPage(page);
+        };
+        top.Controls.Add(languagePicker);
         Controls.Add(top);
 
         Panel footer = new Panel { Dock = DockStyle.Bottom, Height = 78, BackColor = Color.FromArgb(14, 14, 14) };
-        step = new Label { ForeColor = muted, AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Location = new Point(26, 22), Size = new Size(190, 32), Text = "ETAPA 1 DE 3" };
-        back = MakeButton("VOLTAR", false); back.SetBounds(footer.Width - 348, 17, 96, 44); back.Anchor = AnchorStyles.Right | AnchorStyles.Top; back.Click += delegate { if (page > 0) ShowPage(page - 1); };
-        cancel = MakeButton("CANCELAR", false); cancel.SetBounds(footer.Width - 240, 17, 108, 44); cancel.Anchor = AnchorStyles.Right | AnchorStyles.Top; cancel.Click += delegate { if (!installing) Close(); };
-        next = MakeButton("COMEÇAR", true); next.SetBounds(footer.Width - 120, 17, 104, 44); next.Anchor = AnchorStyles.Right | AnchorStyles.Top; next.Click += NextClicked;
+        step = new Label { ForeColor = muted, AutoSize = false, TextAlign = ContentAlignment.MiddleLeft, Location = new Point(26, 22), Size = new Size(190, 32), Text = L("ETAPA 1 DE 3", "STEP 1 OF 3", "PASO 1 DE 3") };
+        back = MakeButton(L("VOLTAR", "BACK", "VOLVER"), false); back.SetBounds(footer.Width - 348, 17, 96, 44); back.Anchor = AnchorStyles.Right | AnchorStyles.Top; back.Click += delegate { if (page > 0) ShowPage(page - 1); };
+        cancel = MakeButton(L("CANCELAR", "CANCEL", "CANCELAR"), false); cancel.SetBounds(footer.Width - 240, 17, 108, 44); cancel.Anchor = AnchorStyles.Right | AnchorStyles.Top; cancel.Click += delegate { if (!installing) Close(); };
+        next = MakeButton(L("COMEÇAR", "START", "COMENZAR"), true); next.SetBounds(footer.Width - 120, 17, 104, 44); next.Anchor = AnchorStyles.Right | AnchorStyles.Top; next.Click += NextClicked;
         footer.Controls.Add(step); footer.Controls.Add(back); footer.Controls.Add(cancel); footer.Controls.Add(next);
         Controls.Add(footer);
 
@@ -73,6 +86,8 @@ internal sealed class InstallerForm : Form
         Controls.Add(content);
         ShowPage(0);
     }
+
+    private string L(string pt, string en, string es) { return language == 1 ? en : language == 2 ? es : pt; }
 
     private Button MakeButton(string text, bool primary)
     {
@@ -199,65 +214,65 @@ internal sealed class InstallerForm : Form
         back.Visible = page > 0 && page < 3;
         cancel.Visible = page < 3;
         next.Visible = page != 3;
-        next.Text = page == 0 ? (updateMode ? "ATUALIZAR" : "COMEÇAR") : page == 1 ? "CONTINUAR" : page == 2 ? (updateMode ? "ATUALIZAR" : "INSTALAR") : "CONCLUIR";
-        step.Text = page < 3 ? "ETAPA " + (page + 1) + " DE 3" : page == 3 ? "PREPARANDO" : "CONCLUÍDO";
+        next.Text = page == 0 ? (updateMode ? L("ATUALIZAR", "UPDATE", "ACTUALIZAR") : L("COMEÇAR", "START", "COMENZAR")) : page == 1 ? L("CONTINUAR", "CONTINUE", "CONTINUAR") : page == 2 ? (updateMode ? L("ATUALIZAR", "UPDATE", "ACTUALIZAR") : L("INSTALAR", "INSTALL", "INSTALAR")) : L("CONCLUIR", "FINISH", "FINALIZAR");
+        step.Text = page < 3 ? L("ETAPA ", "STEP ", "PASO ") + (page + 1) + L(" DE 3", " OF 3", " DE 3") : page == 3 ? L("PREPARANDO", "PREPARING", "PREPARANDO") : L("CONCLUÍDO", "COMPLETED", "COMPLETADO");
 
         if (page == 0) {
-            title.Text = updateMode ? "Vamos atualizar seu Edit Master." : "Seu próximo projeto começa aqui.";
-            subtitle.Text = updateMode ? "Encontramos uma instalação existente." : "EDIT MASTER 1.0 BETA OFICIAL";
+            title.Text = updateMode ? L("Vamos atualizar seu Edit Master.", "Let’s update Edit Master.", "Vamos a actualizar Edit Master.") : L("Seu próximo projeto começa aqui.", "Your next project starts here.", "Tu próximo proyecto empieza aquí.");
+            subtitle.Text = updateMode ? L("Encontramos uma instalação existente.", "We found an existing installation.", "Encontramos una instalación existente.") : L("EDIT MASTER 1.0 BETA OFICIAL", "EDIT MASTER 1.0 OFFICIAL BETA", "EDIT MASTER 1.0 BETA OFICIAL");
             body.Text = updateMode
-                ? "Vamos substituir os arquivos do aplicativo pela nova versão, mantendo a mesma pasta e os componentes escolhidos. Seus projetos e preferências serão preservados."
-                : "Um editor de vídeo leve, simples e pronto para criar.\r\nEste assistente vai preparar tudo para você.";
+                ? L("Vamos substituir os arquivos do aplicativo pela nova versão, mantendo a mesma pasta e os componentes escolhidos. Seus projetos e preferências serão preservados.", "We’ll replace the application files with the new version, keeping the same folder and selected components. Your projects and preferences will be preserved.", "Reemplazaremos los archivos de la aplicación por la nueva versión, manteniendo la misma carpeta y los componentes seleccionados. Tus proyectos y preferencias se conservarán.")
+                : L("Um editor de vídeo leve, simples e pronto para criar.\r\nEste assistente vai preparar tudo para você.", "A lightweight, simple video editor, ready to create.\r\nThis assistant will prepare everything for you.", "Un editor de vídeo ligero y sencillo, listo para crear.\r\nEste asistente preparará todo por ti.");
             content.Controls.Add(CreateHeroArt(false));
             if (updateMode) {
                 Panel info = new Panel { BackColor = panel, Bounds = new Rectangle(32, 350, 670, 58) };
                 Label accent = new Label { BackColor = orange, Bounds = new Rectangle(0, 0, 5, 58) };
-                Label heading = new Label { Text = "ATUALIZAÇÃO DISPONÍVEL", ForeColor = orange, Font = new Font("Segoe UI", 9, FontStyle.Bold), AutoSize = true, Location = new Point(22, 5) };
+                Label heading = new Label { Text = L("ATUALIZAÇÃO DISPONÍVEL", "UPDATE AVAILABLE", "ACTUALIZACIÓN DISPONIBLE"), ForeColor = orange, Font = new Font("Segoe UI", 9, FontStyle.Bold), AutoSize = true, Location = new Point(22, 5) };
                 Label path = new Label { Text = installDir, ForeColor = Color.White, Font = new Font("Segoe UI", 8), AutoSize = false, AutoEllipsis = true, Location = new Point(22, 28), Size = new Size(625, 22) };
                 info.Controls.Add(accent); info.Controls.Add(heading); info.Controls.Add(path); content.Controls.Add(info);
             }
         } else if (page == 1) {
-            title.Text = "Escolha seus recursos.";
-            subtitle.Text = "O que você quer ter instalado?";
-            body.Text = "FFmpeg e Whisper podem ficar fora do SSD do sistema. Escolha uma unidade com espaço livre; os dois ficarão juntos nela.";
+            title.Text = L("Escolha seus recursos.", "Choose your components.", "Elige tus componentes.");
+            subtitle.Text = L("O que você quer ter instalado?", "What would you like to install?", "¿Qué quieres instalar?");
+            body.Text = L("FFmpeg e Whisper podem ficar fora do SSD do sistema. Escolha uma unidade com espaço livre; os dois ficarão juntos nela.", "FFmpeg and Whisper can be stored outside your system SSD. Choose a drive with free space; both components will be stored there.", "FFmpeg y Whisper pueden guardarse fuera del SSD del sistema. Elige una unidad con espacio libre; ambos componentes se guardarán allí.");
             ffmpeg = new CheckBox { Text = "FFmpeg + FFprobe", Checked = updateMode ? ExistingComponent("ffmpeg") : true, ForeColor = Color.White, BackColor = panel, AutoSize = true, Location = new Point(18, 12), Font = new Font("Segoe UI", 11, FontStyle.Bold) };
             whisper = new CheckBox { Text = "Whisper.cpp + modelo Tiny", Checked = updateMode ? ExistingComponent("whisper") : true, ForeColor = Color.White, BackColor = panel, AutoSize = true, Location = new Point(18, 12), Font = new Font("Segoe UI", 11, FontStyle.Bold) };
             Panel fcard = new Panel { BackColor = panel, Bounds = new Rectangle(32, 180, 670, 62) };
             ffmpeg.Location = new Point(18, 6); fcard.Controls.Add(ffmpeg);
-            Label fdesc = new Label { Text = "Exportação, conversão e processamento de mídia", ForeColor = muted, AutoSize = true, Location = new Point(42, 34) }; fcard.Controls.Add(fdesc);
+            Label fdesc = new Label { Text = L("Exportação, conversão e processamento de mídia", "Exporting, converting and processing media", "Exportación, conversión y procesamiento multimedia"), ForeColor = muted, AutoSize = true, Location = new Point(42, 34) }; fcard.Controls.Add(fdesc);
             Panel wcard = new Panel { BackColor = panel, Bounds = new Rectangle(32, 250, 670, 62) };
             whisper.Location = new Point(18, 6); wcard.Controls.Add(whisper);
-            Label wdesc = new Label { Text = "Legendas automáticas com transcrição local e offline", ForeColor = muted, AutoSize = true, Location = new Point(42, 34) }; wcard.Controls.Add(wdesc);
-            Label driveLabel = new Label { Text = "UNIDADE PARA OS COMPONENTES", ForeColor = orange, Font = new Font("Segoe UI", 9, FontStyle.Bold), AutoSize = true, Location = new Point(34, 326) };
+            Label wdesc = new Label { Text = L("Legendas automáticas com transcrição local e offline", "Automatic subtitles with local, offline transcription", "Subtítulos automáticos con transcripción local y sin conexión"), ForeColor = muted, AutoSize = true, Location = new Point(42, 34) }; wcard.Controls.Add(wdesc);
+            Label driveLabel = new Label { Text = L("UNIDADE PARA OS COMPONENTES", "COMPONENTS DRIVE", "UNIDAD PARA LOS COMPONENTES"), ForeColor = orange, Font = new Font("Segoe UI", 9, FontStyle.Bold), AutoSize = true, Location = new Point(34, 326) };
             mediaDrive = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(38, 38, 38), ForeColor = Color.White, Font = new Font("Segoe UI", 10), Location = new Point(34, 350), Width = 360, Height = 30 };
             PopulateDrives();
             ffmpeg.CheckedChanged += ComponentsChanged; whisper.CheckedChanged += ComponentsChanged;
             content.Controls.Add(fcard); content.Controls.Add(wcard); content.Controls.Add(driveLabel); content.Controls.Add(mediaDrive);
         } else if (page == 2) {
-            title.Text = updateMode ? "Tudo pronto para atualizar." : "Onde instalar o aplicativo?";
-            subtitle.Text = updateMode ? "Vamos manter a pasta atual do Edit Master." : "Escolha a pasta do Edit Master.";
-            body.Text = updateMode ? "A localização atual será mantida para que a atualização substitua os arquivos sem criar outra instalação." : "Os componentes opcionais serão guardados na unidade escolhida na etapa anterior.";
+            title.Text = updateMode ? L("Tudo pronto para atualizar.", "Ready to update.", "Todo listo para actualizar.") : L("Onde instalar o aplicativo?", "Where should the app be installed?", "¿Dónde instalar la aplicación?");
+            subtitle.Text = updateMode ? L("Vamos manter a pasta atual do Edit Master.", "We’ll keep the current Edit Master folder.", "Mantendremos la carpeta actual de Edit Master.") : L("Escolha a pasta do Edit Master.", "Choose the Edit Master folder.", "Elige la carpeta de Edit Master.");
+            body.Text = updateMode ? L("A localização atual será mantida para que a atualização substitua os arquivos sem criar outra instalação.", "The current location will be kept so the update replaces files without creating another installation.", "Se mantendrá la ubicación actual para que la actualización reemplace los archivos sin crear otra instalación.") : L("Os componentes opcionais serão guardados na unidade escolhida na etapa anterior.", "Optional components will be stored on the drive selected in the previous step.", "Los componentes opcionales se guardarán en la unidad elegida en el paso anterior.");
             folder = new TextBox { Text = installDir, BackColor = Color.FromArgb(38, 38, 38), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Font = new Font("Segoe UI", 10), Location = new Point(34, 218), Width = 510, Height = 34, ReadOnly = updateMode };
-            Button browse = MakeButton("PROCURAR", false); browse.SetBounds(556, 215, 112, 40); browse.Enabled = !updateMode;
-            browse.Click += delegate { using (FolderBrowserDialog d = new FolderBrowserDialog()) { d.SelectedPath = folder.Text; d.Description = "Selecione a pasta de instalação do Edit Master"; if (d.ShowDialog(this) == DialogResult.OK) folder.Text = d.SelectedPath; } };
+            Button browse = MakeButton(L("PROCURAR", "BROWSE", "EXAMINAR"), false); browse.SetBounds(556, 215, 112, 40); browse.Enabled = !updateMode;
+            browse.Click += delegate { using (FolderBrowserDialog d = new FolderBrowserDialog()) { d.SelectedPath = folder.Text; d.Description = L("Selecione a pasta de instalação do Edit Master", "Select the Edit Master installation folder", "Selecciona la carpeta de instalación de Edit Master"); if (d.ShowDialog(this) == DialogResult.OK) folder.Text = d.SelectedPath; } };
             content.Controls.Add(folder); content.Controls.Add(browse);
         } else if (page == 3) {
-            title.Text = updateMode ? "Atualizando o Edit Master" : "Instalando o Edit Master";
-            subtitle.Text = "Só mais um momento.";
-            body.Text = "Estamos organizando os arquivos e configurando seus componentes. Não feche esta janela.";
+            title.Text = updateMode ? L("Atualizando o Edit Master", "Updating Edit Master", "Actualizando Edit Master") : L("Instalando o Edit Master", "Installing Edit Master", "Instalando Edit Master");
+            subtitle.Text = L("Só mais um momento.", "Just a moment.", "Un momento.");
+            body.Text = L("Estamos organizando os arquivos e configurando seus componentes. Não feche esta janela.", "We’re organizing files and setting up your components. Please don’t close this window.", "Estamos organizando los archivos y configurando tus componentes. No cierres esta ventana.");
             progress = new ProgressBar { Style = ProgressBarStyle.Marquee, MarqueeAnimationSpeed = 28, Location = new Point(34, 230), Width = 660, Height = 18 };
             content.Controls.Add(progress);
             back.Visible = false; cancel.Visible = false; next.Visible = false;
             installing = true;
             BeginInstall();
         } else {
-            title.Text = updateMode ? "Atualização concluída!" : "Instalação concluída!";
-            subtitle.Text = "O Edit Master está pronto para você.";
-            body.Text = "Tudo certo! Seus componentes foram organizados na unidade escolhida e o aplicativo está pronto para abrir.";
+            title.Text = updateMode ? L("Atualização concluída!", "Update complete!", "¡Actualización completada!") : L("Instalação concluída!", "Installation complete!", "¡Instalación completada!");
+            subtitle.Text = L("O Edit Master está pronto para você.", "Edit Master is ready for you.", "Edit Master está listo para ti.");
+            body.Text = L("Tudo certo! Seus componentes foram organizados na unidade escolhida e o aplicativo está pronto para abrir.", "All done! Your components are in the selected drive and the app is ready to launch.", "¡Listo! Tus componentes están en la unidad seleccionada y la aplicación está lista para abrir.");
             content.Controls.Add(CreateHeroArt(true));
-            launch = new CheckBox { Text = "Abrir Edit Master agora", Checked = true, ForeColor = Color.White, BackColor = bg, AutoSize = true, Location = new Point(34, 360), Font = new Font("Segoe UI", 11, FontStyle.Bold) };
+            launch = new CheckBox { Text = L("Abrir Edit Master agora", "Launch Edit Master now", "Abrir Edit Master ahora"), Checked = true, ForeColor = Color.White, BackColor = bg, AutoSize = true, Location = new Point(34, 360), Font = new Font("Segoe UI", 11, FontStyle.Bold) };
             content.Controls.Add(launch);
-            back.Visible = false; cancel.Visible = false; next.Visible = true; next.Text = "CONCLUIR";
+            back.Visible = false; cancel.Visible = false; next.Visible = true; next.Text = L("CONCLUIR", "FINISH", "FINALIZAR");
         }
     }
 
