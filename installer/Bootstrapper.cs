@@ -20,7 +20,10 @@ internal sealed class InstallerForm : Form
     private CheckBox ffmpeg, whisper, launch;
     private TextBox folder;
     private ComboBox mediaDrive;
-    private ProgressBar progress;
+    private Panel progressTrack, progressFill;
+    private Label progressPercent, progressStatus;
+    private System.Windows.Forms.Timer progressTimer;
+    private int progressValue = 0;
     private int page = 0;
     private string installDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Edit Master");
     private string existingInstallDir = "";
@@ -161,8 +164,11 @@ internal sealed class InstallerForm : Form
 
     private void ResetContent()
     {
+        if (progressTimer != null) { progressTimer.Stop(); progressTimer.Dispose(); progressTimer = null; }
         for (int i = content.Controls.Count - 1; i >= 3; i--) content.Controls.RemoveAt(i);
-        progress = null;
+        progressTrack = progressFill = null;
+        progressPercent = progressStatus = null;
+        progressValue = 0;
     }
 
     private void AddCardLabel(Panel card, string heading, string description, int y)
@@ -175,38 +181,83 @@ internal sealed class InstallerForm : Form
 
     private Panel CreateHeroArt(bool done)
     {
-        Panel p = new Panel { BackColor = Color.FromArgb(25,25,25), Bounds = new Rectangle(32,188,670,150) };
+        Panel p = new Panel { BackColor = Color.FromArgb(22,22,22), Bounds = new Rectangle(32,188,670,150) };
         p.Paint += delegate(object sender, PaintEventArgs e) {
-            Graphics g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
             Rectangle r = p.ClientRectangle;
-            using (LinearGradientBrush b = new LinearGradientBrush(r, Color.FromArgb(48,32,23), Color.FromArgb(17,23,29), 0f)) g.FillRectangle(b,r);
-            using (Pen grid = new Pen(Color.FromArgb(24,255,255,255))) {
-                for(int x=15;x<670;x+=28) g.DrawLine(grid,x,0,x,150);
-                for(int y=15;y<150;y+=28) g.DrawLine(grid,0,y,670,y);
+            using (GraphicsPath rounded = new GraphicsPath()) {
+                rounded.AddArc(0,0,18,18,180,90); rounded.AddArc(r.Width-18,0,18,18,270,90);
+                rounded.AddArc(r.Width-18,r.Height-18,18,18,0,90); rounded.AddArc(0,r.Height-18,18,18,90,90);
+                rounded.CloseFigure();
+                using (LinearGradientBrush bgBrush = new LinearGradientBrush(r, Color.FromArgb(48,28,18), Color.FromArgb(13,19,26), 0f))
+                    g.FillPath(bgBrush, rounded);
             }
-            using (SolidBrush white = new SolidBrush(Color.White))
-            using (SolidBrush mutedBrush = new SolidBrush(Color.FromArgb(195,210,210,210)))
-            using (SolidBrush orangeBrush = new SolidBrush(Color.FromArgb(255,122,0))) {
-                using(Font h = new Font("Segoe UI", done?19f:17f, FontStyle.Bold)) g.DrawString(done?L("PRONTO PARA CRIAR.","READY TO CREATE.","LISTO PARA CREAR."):L("CRIE. EDITE. TRANSFORME.","CREATE. EDIT. TRANSFORM.","CREA. EDITA. TRANSFORMA."),h,white,28,35);
-                using(Font sub = new Font("Segoe UI",9.5f)) g.DrawString(done?L("Seu próximo projeto começa agora.","Your next project starts now.","Tu próximo proyecto empieza ahora."):L("Suas ideias ganham vida com o Edit Master.","Bring your ideas to life with Edit Master.","Tus ideas cobran vida con Edit Master."),sub,mutedBrush,30,73);
-                using(Font tag = new Font("Segoe UI",8f,FontStyle.Bold)) g.DrawString(done?L("INSTALAÇÃO FINALIZADA","INSTALLATION COMPLETE","INSTALACIÓN FINALIZADA"):"EDIT MASTER  •  1.0 BETA",tag,orangeBrush,30,106);
-                for(int i=0;i<5;i++) {
-                    Rectangle f = new Rectangle(376+i*48,48+(i%2)*5,40,31);
-                    using(SolidBrush fb = new SolidBrush(i==2?Color.FromArgb(255,122,0):Color.FromArgb(65,75,82))) g.FillRectangle(fb,f);
-                    using(Pen fp = new Pen(Color.FromArgb(170,255,255,255))) g.DrawRectangle(fp,f);
+            using (Pen grid = new Pen(Color.FromArgb(20,255,255,255),1f)) {
+                for(int x=12;x<670;x+=24) g.DrawLine(grid,x,0,x,150);
+                for(int y=12;y<150;y+=24) g.DrawLine(grid,0,y,670,y);
+            }
+            using (SolidBrush accent = new SolidBrush(Color.FromArgb(255,122,0))) g.FillRectangle(accent,0,0,4,150);
+
+            // Cinematic preview window with a warm sunset and layered landscape.
+            Rectangle preview = new Rectangle(20,16,326,94);
+            using (LinearGradientBrush sky = new LinearGradientBrush(preview, Color.FromArgb(255,122,40), Color.FromArgb(24,35,53), 90f)) g.FillRectangle(sky,preview);
+            using (SolidBrush sunGlow = new SolidBrush(Color.FromArgb(70,255,180,75))) g.FillEllipse(sunGlow,250,32,42,42);
+            using (SolidBrush sun = new SolidBrush(Color.FromArgb(255,205,116))) g.FillEllipse(sun,263,43,17,17);
+            using (SolidBrush farMountain = new SolidBrush(Color.FromArgb(70,64,72))) g.FillPolygon(farMountain,new Point[]{new Point(20,88),new Point(78,49),new Point(118,78),new Point(170,43),new Point(224,82),new Point(274,55),new Point(346,90),new Point(346,110),new Point(20,110)});
+            using (SolidBrush nearMountain = new SolidBrush(Color.FromArgb(28,39,45))) g.FillPolygon(nearMountain,new Point[]{new Point(20,91),new Point(73,70),new Point(119,89),new Point(173,67),new Point(218,91),new Point(270,70),new Point(346,94),new Point(346,110),new Point(20,110)});
+            using (LinearGradientBrush water = new LinearGradientBrush(new Rectangle(20,91,326,19),Color.FromArgb(181,85,39),Color.FromArgb(17,30,39),90f)) g.FillRectangle(water,20,91,326,19);
+            using (Pen reflection = new Pen(Color.FromArgb(145,255,143,74),1.3f)) {
+                g.DrawLine(reflection,230,96,300,96); g.DrawLine(reflection,245,101,285,101); g.DrawLine(reflection,215,106,308,106);
+            }
+            using (Pen frame = new Pen(Color.FromArgb(125,255,255,255),1f)) g.DrawRectangle(frame,preview);
+
+            // Editing timeline cards and audio waveform.
+            using (SolidBrush panelBrush = new SolidBrush(Color.FromArgb(105,8,12,17))) g.FillRectangle(panelBrush,360,16,288,94);
+            using (Pen divider = new Pen(Color.FromArgb(75,255,255,255),1f)) {
+                g.DrawLine(divider,360,48,648,48); g.DrawLine(divider,360,83,648,83);
+            }
+            for(int i=0;i<4;i++) {
+                int x=370+i*67;
+                Rectangle clip=new Rectangle(x,25,59,18);
+                using (LinearGradientBrush clipBrush = new LinearGradientBrush(clip, i==1?Color.FromArgb(255,122,0):Color.FromArgb(67,91,106), Color.FromArgb(27,37,46), 0f)) g.FillRectangle(clipBrush,clip);
+                using (Pen clipBorder = new Pen(Color.FromArgb(130,255,255,255),1f)) g.DrawRectangle(clipBorder,clip);
+                for(int w=0;w<8;w++) {
+                    int h=3+(int)((Math.Sin((w+i)*1.35)+1)*5);
+                    using (SolidBrush wave = new SolidBrush(Color.FromArgb(190,255,145,55))) g.FillRectangle(wave,x+4+w*6,92-h,3,h);
                 }
-                using(Pen track = new Pen(Color.FromArgb(130,255,255,255),2f)) g.DrawLine(track,370,118,630,118);
-                if(done) {
-                    using(Pen check = new Pen(Color.FromArgb(255,122,0),7f)) { check.StartCap=LineCap.Round; check.EndCap=LineCap.Round; g.DrawLines(check,new Point[]{new Point(510,91),new Point(528,108),new Point(560,72)}); }
-                    using(Font pct = new Font("Segoe UI",8f,FontStyle.Bold)) g.DrawString("100%",pct,white,579,84);
-                } else {
-                    g.FillEllipse(orangeBrush,490,82,34,34);
-                    using(SolidBrush play = new SolidBrush(Color.FromArgb(25,25,25))) g.FillPolygon(play,new Point[]{new Point(503,91),new Point(503,107),new Point(516,99)});
-                }
-                using(Font logo = new Font("Segoe UI",23f,FontStyle.Bold)) g.DrawString("M",logo,white,625,10);
+            }
+            using (Pen playhead = new Pen(Color.FromArgb(255,122,0),2f)) g.DrawLine(playhead,500,20,500,105);
+            using (SolidBrush playheadHead = new SolidBrush(Color.FromArgb(255,122,0))) g.FillPolygon(playheadHead,new Point[]{new Point(493,18),new Point(507,18),new Point(500,27)});
+
+            using (SolidBrush logoBack = new SolidBrush(Color.FromArgb(255,122,0))) g.FillEllipse(logoBack,606,116,28,28);
+            using (SolidBrush logoText = new SolidBrush(Color.FromArgb(18,18,18)))
+            using (Font logo = new Font("Segoe UI",14f,FontStyle.Bold)) g.DrawString("M",logo,logoText,611,116);
+            using (SolidBrush headline = new SolidBrush(Color.White))
+            using (SolidBrush sub = new SolidBrush(Color.FromArgb(195,210,210,210)))
+            using (SolidBrush tag = new SolidBrush(Color.FromArgb(255,145,45))) {
+                using(Font h = new Font("Segoe UI",10.5f,FontStyle.Bold)) g.DrawString(done?L("PRONTO PARA CRIAR.","READY TO CREATE.","LISTO PARA CREAR."):L("CRIE. EDITE. TRANSFORME.","CREATE. EDIT. TRANSFORM.","CREA. EDITA. TRANSFORMA."),h,headline,22,117);
+                using(Font small = new Font("Segoe UI",7.5f)) g.DrawString(done?L("Instalação finalizada com sucesso.","Installation completed successfully.","Instalación completada correctamente."):L("Suas ideias ganham vida com o Edit Master.","Bring your ideas to life with Edit Master.","Tus ideas cobran vida con Edit Master."),small,sub,24,136);
+                using(Font tagFont = new Font("Segoe UI",7f,FontStyle.Bold)) g.DrawString("EDIT MASTER  •  1.0 BETA",tagFont,tag,430,120);
+            }
+            if(done) {
+                using (Pen check = new Pen(Color.FromArgb(255,145,45),5f)) { check.StartCap=LineCap.Round; check.EndCap=LineCap.Round; g.DrawLines(check,new Point[]{new Point(560,128),new Point(570,137),new Point(590,115)}); }
             }
         };
         return p;
+    }
+
+    private void SetInstallProgress(int value, string status)
+    {
+        progressValue = Math.Max(0, Math.Min(100, value));
+        if (progressFill != null && progressTrack != null) {
+            int available = Math.Max(1, progressTrack.ClientSize.Width - 4);
+            progressFill.Width = Math.Max(progressValue == 0 ? 0 : 4, available * progressValue / 100);
+        }
+        if (progressPercent != null) progressPercent.Text = progressValue.ToString() + "%";
+        if (progressStatus != null) progressStatus.Text = status;
+        if (progressTrack != null) progressTrack.Refresh();
     }
 
     private void ShowPage(int index)
@@ -261,8 +312,19 @@ internal sealed class InstallerForm : Form
             title.Text = updateMode ? L("Atualizando o Edit Master", "Updating Edit Master", "Actualizando Edit Master") : L("Instalando o Edit Master", "Installing Edit Master", "Instalando Edit Master");
             subtitle.Text = L("Só mais um momento.", "Just a moment.", "Un momento.");
             body.Text = L("Estamos organizando os arquivos e configurando seus componentes. Não feche esta janela.", "We’re organizing files and setting up your components. Please don’t close this window.", "Estamos organizando los archivos y configurando tus componentes. No cierres esta ventana.");
-            progress = new ProgressBar { Style = ProgressBarStyle.Marquee, MarqueeAnimationSpeed = 28, Location = new Point(34, 230), Width = 660, Height = 18 };
-            content.Controls.Add(progress);
+            Label progressHeading = new Label { Text = L("PROGRESSO DA INSTALAÇÃO", "INSTALLATION PROGRESS", "PROGRESO DE INSTALACIÓN"), ForeColor = orange, Font = new Font("Segoe UI", 9, FontStyle.Bold), AutoSize = true, Location = new Point(34, 205) };
+            progressPercent = new Label { Text = "0%", ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), TextAlign = ContentAlignment.MiddleRight, Location = new Point(630, 201), Size = new Size(64, 24) };
+            progressTrack = new Panel { BackColor = Color.FromArgb(48,48,48), Location = new Point(34, 238), Size = new Size(660, 12) };
+            progressFill = new Panel { BackColor = orange, Location = new Point(2, 2), Size = new Size(0, 8) };
+            progressFill.Paint += delegate(object sender, PaintEventArgs e) {
+                Rectangle rr = progressFill.ClientRectangle;
+                if (rr.Width > 0 && rr.Height > 0) using (LinearGradientBrush glow = new LinearGradientBrush(rr, Color.FromArgb(255,170,65), Color.FromArgb(255,100,0), 0f)) e.Graphics.FillRectangle(glow, rr);
+            };
+            progressTrack.Controls.Add(progressFill);
+            progressStatus = new Label { Text = L("Preparando os arquivos...", "Preparing files...", "Preparando archivos..."), ForeColor = muted, Font = new Font("Segoe UI", 9), AutoSize = false, Location = new Point(34, 258), Size = new Size(660, 26) };
+            content.Controls.Add(progressHeading); content.Controls.Add(progressPercent); content.Controls.Add(progressTrack); content.Controls.Add(progressStatus);
+            progressTimer = new System.Windows.Forms.Timer { Interval = 450 };
+            progressTimer.Tick += delegate { if (progressValue < 72) SetInstallProgress(progressValue + 1, L("Instalando arquivos do aplicativo...", "Installing application files...", "Instalando archivos de la aplicación...")); };
             back.Visible = false; cancel.Visible = false; next.Visible = false;
             installing = true;
             BeginInstall();
@@ -483,6 +545,7 @@ internal sealed class InstallerForm : Form
         string destinationRoot = (useFfmpeg || useWhisper) ? SelectedMediaRoot() : "";
         string previousRoot = existingMediaRoot;
         try {
+            SetInstallProgress(5, L("Preparando o pacote de instalação...", "Preparing the installation package...", "Preparando el paquete de instalación..."));
             string payload = Path.Combine(Path.GetTempPath(), "EditMasterSetup-" + Guid.NewGuid().ToString("N") + ".exe");
             string installMarker = Path.Combine(Path.GetTempPath(), "EditMasterInstall-" + Guid.NewGuid().ToString("N") + ".ini");
             using (Stream input = Assembly.GetExecutingAssembly().GetManifestResourceStream("EditMasterPayload.exe")) {
@@ -496,9 +559,13 @@ internal sealed class InstallerForm : Form
                 " /EMWHISPER=" + (useWhisper ? "1" : "0") +
                 " /EMMARKER=\"" + installMarker + "\"" +
                 " /D=" + installDir; // NSIS /D= must be the final argument and its path must not be quoted; it consumes the remainder of the command line.
+            SetInstallProgress(12, L("Pacote preparado. Iniciando a instalação...", "Package ready. Starting installation...", "Paquete listo. Iniciando la instalación..."));
             ProcessStartInfo psi = new ProcessStartInfo(payload, args) { UseShellExecute = true, Verb = "runas" };
             using (Process p = Process.Start(psi)) {
+                if (progressTimer != null) progressTimer.Start();
                 await System.Threading.Tasks.Task.Run(delegate { p.WaitForExit(); });
+                if (progressTimer != null) progressTimer.Stop();
+                SetInstallProgress(78, L("Aplicativo instalado. Configurando componentes...", "Application installed. Configuring components...", "Aplicación instalada. Configurando componentes..."));
                 if (p.ExitCode != 0) throw new Exception("O mecanismo de instalação retornou o código " + p.ExitCode + ".");
             }
             if (File.Exists(installMarker)) {
@@ -517,7 +584,10 @@ internal sealed class InstallerForm : Form
                     ". Verifique se o instalador realmente concluiu a cópia dos arquivos.");
             if (useFfmpeg || useWhisper) FinalizeMediaTools(useFfmpeg, useWhisper, destinationRoot, previousRoot);
             else FinalizeMediaTools(false, false, "", previousRoot);
+            SetInstallProgress(96, L("Finalizando atalhos e configurações...", "Finishing shortcuts and settings...", "Finalizando accesos directos y configuración..."));
             try { File.Delete(payload); } catch { }
+            if (progressTimer != null) progressTimer.Stop();
+            SetInstallProgress(100, L("Instalação concluída!", "Installation complete!", "¡Instalación completada!"));
             installing = false;
             ShowPage(4);
         } catch (Exception ex) {
