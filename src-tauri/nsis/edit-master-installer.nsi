@@ -658,8 +658,15 @@ Function RunMainBinary
   nsis_tauri_utils::RunAsUser "$INSTDIR${MAINBINARYNAME}.exe" ""
 FunctionEnd
 
-; Uninstaller Pages
-; 1. Confirm uninstall page
+ ; Uninstaller Pages - Edit Master branded welcome and confirmation.
+!define MUI_UNWELCOMEPAGE_TITLE "Desinstalar o Edit Master"
+!define MUI_UNWELCOMEPAGE_TEXT "Este assistente vai remover o Edit Master deste computador.$\r$\n$\r$\nNa próxima etapa, você poderá escolher se deseja apagar também as configurações e os dados locais. Essa opção é opcional.$\r$\n$\r$\nSe você abriu esta tela por engano, basta cancelar."
+; 1. Welcome page
+!define MUI_PAGE_HEADER_TEXT "EDIT MASTER"
+!define MUI_PAGE_HEADER_SUBTEXT "Assistente de desinstalação"
+!insertmacro MUI_UNPAGE_WELCOME
+
+; 2. Confirm uninstall page
 Var DeleteAppDataCheckbox
 Var DeleteAppDataCheckboxState
 !define /ifndef WS_EX_LAYOUTRTL         0x00400000
@@ -703,7 +710,7 @@ FunctionEnd
 !define MUI_PAGE_CUSTOMFUNCTION_PRE un.SkipIfPassive
 !insertmacro MUI_UNPAGE_CONFIRM
 
-; 2. Uninstalling Page
+; 3. Uninstalling Page
 !insertmacro MUI_UNPAGE_INSTFILES
 
 ;Languages
