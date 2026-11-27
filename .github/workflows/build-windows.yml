@@ -52,10 +52,19 @@ jobs:
           $ffmpegHeaders = @{ "User-Agent" = "EditMaster-CI"; "Accept" = "application/vnd.github+json" }
           Write-Host "Resolving the latest FFmpeg release asset through the GitHub API..."
           $ffmpegRelease = Invoke-RestMethod -Uri $ffmpegReleaseApi -Headers $ffmpegHeaders -TimeoutSec 60
-          $ffmpegAsset = $ffmpegRelease.assets | Where-Object { $_.name -eq "ffmpeg-master-latest-win64-gpl.zip" } | Select-Object -First 1
+          # BtbN now publishes versioned asset names. Prefer the regular GPL build (not the shared/DLL variant).
+          # First prefer the un-suffixed win64 GPL ZIP, then accept version-suffixed stable ZIPs.
+          $ffmpegAssets = @($ffmpegRelease.assets | Where-Object {
+            $_.name -match "(?i)^ffmpeg-.*-win64-gpl(?:-[0-9][0-9.]*)?\.zip$" -and
+            $_.name -notmatch "(?i)shared"
+          })
+          $ffmpegAsset = $ffmpegAssets | Where-Object { $_.name -match "(?i)-win64-gpl\.zip$" } | Select-Object -First 1
+          if (-not $ffmpegAsset) {
+            $ffmpegAsset = $ffmpegAssets | Select-Object -First 1
+          }
           if (-not $ffmpegAsset -or [string]::IsNullOrWhiteSpace($ffmpegAsset.browser_download_url)) {
-            $available = ($ffmpegRelease.assets | Where-Object { $_.name -match "win64-gpl.*zip" } | ForEach-Object { $_.name }) -join ", "
-            throw "The latest FFmpeg release does not contain the expected win64 GPL ZIP. Available matching assets: $available"
+            $available = ($ffmpegRelease.assets | Where-Object { $_.name -match "(?i)win64.*gpl.*zip" } | ForEach-Object { $_.name }) -join ", "
+            throw "The latest FFmpeg release does not contain a non-shared win64 GPL ZIP. Available matching assets: $available"
           }
           $ffmpegUrl = $ffmpegAsset.browser_download_url
           Write-Host "Selected FFmpeg release: $($ffmpegRelease.tag_name)"
