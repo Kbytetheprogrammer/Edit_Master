@@ -1213,12 +1213,12 @@ Function CreateOrUpdateStartMenuShortcut
     Return
   ${EndIf}
   !if "${STARTMENUFOLDER}" != ""
-    CreateDirectory "$SMPROGRAMS\\$AppStartMenuFolder"
-    CreateShortcut "$SMPROGRAMS\\$AppStartMenuFolder\\${PRODUCTNAME}.lnk" "$INSTDIR\\${MAINBINARYNAME}.exe" "" "$INSTDIR\\${MAINBINARYNAME}.exe" 0 SW_SHOWNORMAL
-    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\\$AppStartMenuFolder\\${PRODUCTNAME}.lnk"
+    CreateDirectory "$SMPROGRAMS\$AppStartMenuFolder"
+    CreateShortcut "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe" "" "$INSTDIR\${MAINBINARYNAME}.exe" 0 SW_SHOWNORMAL
+    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\$AppStartMenuFolder\${PRODUCTNAME}.lnk"
   !else
-    CreateShortcut "$SMPROGRAMS\\${PRODUCTNAME}.lnk" "$INSTDIR\\${MAINBINARYNAME}.exe" "" "$INSTDIR\\${MAINBINARYNAME}.exe" 0 SW_SHOWNORMAL
-    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\\${PRODUCTNAME}.lnk"
+    CreateShortcut "$SMPROGRAMS\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe" "" "$INSTDIR\${MAINBINARYNAME}.exe" 0 SW_SHOWNORMAL
+    !insertmacro SetLnkAppUserModelId "$SMPROGRAMS\${PRODUCTNAME}.lnk"
   !endif
 FunctionEnd
 
@@ -1227,6 +1227,6 @@ Function CreateOrUpdateDesktopShortcut
   ${If} $NoShortcutMode = 1
     Return
   ${EndIf}
-  CreateShortcut "$DESKTOP\\${PRODUCTNAME}.lnk" "$INSTDIR\\${MAINBINARYNAME}.exe" "" "$INSTDIR\\${MAINBINARYNAME}.exe" 0 SW_SHOWNORMAL
-  !insertmacro SetLnkAppUserModelId "$DESKTOP\\${PRODUCTNAME}.lnk"
+  CreateShortcut "$DESKTOP\${PRODUCTNAME}.lnk" "$INSTDIR\${MAINBINARYNAME}.exe" "" "$INSTDIR\${MAINBINARYNAME}.exe" 0 SW_SHOWNORMAL
+  !insertmacro SetLnkAppUserModelId "$DESKTOP\${PRODUCTNAME}.lnk"
 FunctionEnd
