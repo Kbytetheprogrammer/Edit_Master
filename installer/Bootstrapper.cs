@@ -375,14 +375,48 @@ internal sealed class InstallerForm : Form
         return best;
     }
 
+    private void CopyMediaFile(string source, string destination, string component)
+    {
+        try {
+            if (String.IsNullOrWhiteSpace(source) || !File.Exists(source))
+                throw new FileNotFoundException("Arquivo de origem não encontrado.", source);
+            string directory = Path.GetDirectoryName(destination);
+            if (String.IsNullOrWhiteSpace(directory))
+                throw new IOException("Pasta de destino inválida para " + component + ": " + destination);
+            Directory.CreateDirectory(directory);
+            if (File.Exists(destination)) {
+                try { File.SetAttributes(destination, FileAttributes.Normal); } catch { }
+            }
+            using (FileStream input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (FileStream output = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None)) {
+                input.CopyTo(output);
+            }
+        } catch (Exception ex) {
+            throw new IOException("Falha ao copiar " + component + ". Origem: " + source + ". Destino: " + destination + ". Detalhe: " + ex.Message, ex);
+        }
+    }
+
     private void CopyAdjacentDlls(string sourceFile, string destination)
     {
         string sourceDirectory = Path.GetDirectoryName(sourceFile);
         if (String.IsNullOrEmpty(sourceDirectory) || !Directory.Exists(sourceDirectory)) return;
         foreach (string dll in Directory.GetFiles(sourceDirectory, "*.dll")) {
             string target = Path.Combine(destination, Path.GetFileName(dll));
-            File.Copy(dll, target, true);
+            CopyMediaFile(dll, target, "biblioteca " + Path.GetFileName(dll));
         }
+    }
+
+    private void DeleteDirectoryWithNormalizedAttributes(string path)
+    {
+        if (String.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return;
+        foreach (string file in Directory.GetFiles(path, "*", SearchOption.AllDirectories)) {
+            try { File.SetAttributes(file, FileAttributes.Normal); } catch { }
+        }
+        foreach (string directory in Directory.GetDirectories(path, "*", SearchOption.AllDirectories)) {
+            try { File.SetAttributes(directory, FileAttributes.Directory); } catch { }
+        }
+        try { File.SetAttributes(path, FileAttributes.Directory); } catch { }
+        Directory.Delete(path, true);
     }
 
     private void FinalizeMediaTools(bool useFfmpeg, bool useWhisper, string destinationRoot, string previousRoot)
@@ -399,14 +433,14 @@ internal sealed class InstallerForm : Form
             throw new Exception("Whisper.cpp ou o modelo Tiny não foram encontrados dentro do pacote instalado.");
 
         if (useFfmpeg || useWhisper) {
-            if (Directory.Exists(destinationRoot)) Directory.Delete(destinationRoot, true);
+            if (Directory.Exists(destinationRoot)) DeleteDirectoryWithNormalizedAttributes(destinationRoot);
             Directory.CreateDirectory(destinationRoot);
 
             if (useFfmpeg) {
                 string target = Path.Combine(destinationRoot, "ffmpeg");
                 Directory.CreateDirectory(target);
-                File.Copy(ffmpegExe, Path.Combine(target, "ffmpeg.exe"), true);
-                File.Copy(ffprobeExe, Path.Combine(target, "ffprobe.exe"), true);
+                CopyMediaFile(ffmpegExe, Path.Combine(target, "ffmpeg.exe"), "FFmpeg");
+                CopyMediaFile(ffprobeExe, Path.Combine(target, "ffprobe.exe"), "FFprobe");
                 CopyAdjacentDlls(ffmpegExe, target);
                 CopyAdjacentDlls(ffprobeExe, target);
             }
@@ -414,8 +448,8 @@ internal sealed class InstallerForm : Form
             if (useWhisper) {
                 string target = Path.Combine(destinationRoot, "whisper");
                 Directory.CreateDirectory(target);
-                File.Copy(whisperExe, Path.Combine(target, "whisper-cli.exe"), true);
-                File.Copy(whisperModel, Path.Combine(target, "ggml-tiny.bin"), true);
+                CopyMediaFile(whisperExe, Path.Combine(target, "whisper-cli.exe"), "Whisper CLI");
+                CopyMediaFile(whisperModel, Path.Combine(target, "ggml-tiny.bin"), "modelo Whisper Tiny");
                 CopyAdjacentDlls(whisperExe, target);
                 CopyAdjacentDlls(whisperModel, target);
             }
@@ -424,7 +458,7 @@ internal sealed class InstallerForm : Form
             Directory.CreateDirectory(common);
             File.WriteAllText(Path.Combine(common, "MediaTools.ini"), "[MediaTools]\r\nPath=" + destinationRoot + "\r\n");
         } else {
-            if (!String.IsNullOrEmpty(previousRoot) && Directory.Exists(previousRoot)) Directory.Delete(previousRoot, true);
+            if (!String.IsNullOrEmpty(previousRoot) && Directory.Exists(previousRoot)) DeleteDirectoryWithNormalizedAttributes(previousRoot);
             string config = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Edit Master", "MediaTools.ini");
             if (File.Exists(config)) File.Delete(config);
         }
@@ -433,8 +467,8 @@ internal sealed class InstallerForm : Form
         string bundledResources = Path.Combine(installDir, "resources");
         string bundledFfmpeg = Path.Combine(bundledResources, "ffmpeg");
         string bundledWhisper = Path.Combine(bundledResources, "whisper");
-        if (Directory.Exists(bundledFfmpeg)) Directory.Delete(bundledFfmpeg, true);
-        if (Directory.Exists(bundledWhisper)) Directory.Delete(bundledWhisper, true);
+        if (Directory.Exists(bundledFfmpeg)) DeleteDirectoryWithNormalizedAttributes(bundledFfmpeg);
+        if (Directory.Exists(bundledWhisper)) DeleteDirectoryWithNormalizedAttributes(bundledWhisper);
 
         if (!String.IsNullOrEmpty(previousRoot) && !String.IsNullOrEmpty(destinationRoot) &&
             !String.Equals(Path.GetFullPath(previousRoot).TrimEnd('\\'), Path.GetFullPath(destinationRoot).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase) &&
