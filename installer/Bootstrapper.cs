@@ -450,25 +450,37 @@ internal sealed class InstallerForm : Form
         string previousRoot = existingMediaRoot;
         try {
             string payload = Path.Combine(Path.GetTempPath(), "EditMasterSetup-" + Guid.NewGuid().ToString("N") + ".exe");
+            string installMarker = Path.Combine(Path.GetTempPath(), "EditMasterInstall-" + Guid.NewGuid().ToString("N") + ".ini");
             using (Stream input = Assembly.GetExecutingAssembly().GetManifestResourceStream("EditMasterPayload.exe")) {
                 if (input == null) throw new InvalidOperationException("O pacote interno de instalação não foi encontrado.");
                 using (FileStream output = File.Create(payload)) await input.CopyToAsync(output);
             }
+            // NSIS writes its final $INSTDIR to this unique marker. Do not infer
+            // the path from stale uninstall registry entries after an update.
             string args = "/S " + (updateMode ? "/UPDATE " : "") +
                 "/EMFFMPEG=" + (useFfmpeg ? "1" : "0") +
                 " /EMWHISPER=" + (useWhisper ? "1" : "0") +
+                " /EMMARKER=\"" + installMarker + "\"" +
                 " /D=\"" + installDir + "\"";
             ProcessStartInfo psi = new ProcessStartInfo(payload, args) { UseShellExecute = true, Verb = "runas" };
             using (Process p = Process.Start(psi)) {
                 await System.Threading.Tasks.Task.Run(delegate { p.WaitForExit(); });
                 if (p.ExitCode != 0) throw new Exception("O mecanismo de instalação retornou o código " + p.ExitCode + ".");
             }
-            // Read the path actually registered by NSIS. This avoids searching the
-            // originally selected folder if NSIS normalized or restored another location.
-            string registeredInstall = FindExistingInstall();
-            if (!String.IsNullOrWhiteSpace(registeredInstall)) installDir = registeredInstall;
+            if (File.Exists(installMarker)) {
+                string actualInstall = "";
+                foreach (string line in File.ReadAllLines(installMarker)) {
+                    if (line.StartsWith("Path=", StringComparison.OrdinalIgnoreCase)) {
+                        actualInstall = line.Substring(5).Trim().Trim('"');
+                        break;
+                    }
+                }
+                try { File.Delete(installMarker); } catch { }
+                if (!String.IsNullOrWhiteSpace(actualInstall)) installDir = actualInstall;
+            }
             if (!Directory.Exists(installDir))
-                throw new Exception("A pasta de instalação não foi encontrada após o NSIS concluir: " + installDir);
+                throw new Exception("O NSIS terminou, mas a pasta de destino informada não existe: " + installDir +
+                    ". Verifique se o instalador realmente concluiu a cópia dos arquivos.");
             if (useFfmpeg || useWhisper) FinalizeMediaTools(useFfmpeg, useWhisper, destinationRoot, previousRoot);
             else FinalizeMediaTools(false, false, "", previousRoot);
             try { File.Delete(payload); } catch { }
