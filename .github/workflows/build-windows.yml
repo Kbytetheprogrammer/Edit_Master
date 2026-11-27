@@ -167,7 +167,10 @@ jobs:
           $outputArgument = "/out:{0}" -f $output
           $iconArgument = "/win32icon:{0}" -f $icon
           Write-Host "Embedding NSIS payload: $($payload.FullName)"
-          & $compiler /nologo /target:winexe /platform:x64 /optimize+ $outputArgument $iconArgument /reference:System.Windows.Forms.dll /reference:System.Drawing.dll $resourceArgument $bootstrapper
+          $manifest = Join-Path $env:GITHUB_WORKSPACE "installer/Bootstrapper.manifest"
+          if (-not (Test-Path -LiteralPath $manifest -PathType Leaf)) { throw "Bootstrapper elevation manifest is missing: $manifest" }
+          $manifestArgument = "/win32manifest:{0}" -f $manifest
+          & $compiler /nologo /target:winexe /platform:x64 /optimize+ $outputArgument $iconArgument $manifestArgument /reference:System.Windows.Forms.dll /reference:System.Drawing.dll $resourceArgument $bootstrapper
           if ($LASTEXITCODE -ne 0) { throw "Failed to compile the branded installer bootstrapper." }
           if (-not (Test-Path $output)) { throw "Standalone installer output was not created." }
           Write-Host "Standalone installer: $output"
