@@ -53,6 +53,8 @@ internal sealed class InstallerForm : Form
         Button close = MakeButton("×", false); close.Bounds = new Rectangle(Width - 54, 0, 54, 62); close.Anchor = AnchorStyles.Top | AnchorStyles.Right;
         close.Click += delegate { if (!installing) Close(); };
         top.Controls.Add(mark); top.Controls.Add(brand); top.Controls.Add(close);
+        Panel headerAccent = new Panel { Dock = DockStyle.Bottom, Height = 3, BackColor = orange };
+        top.Controls.Add(headerAccent);
         Controls.Add(top);
 
         Panel footer = new Panel { Dock = DockStyle.Bottom, Height = 78, BackColor = Color.FromArgb(14, 14, 14) };
@@ -327,22 +329,67 @@ internal sealed class InstallerForm : Form
         }
     }
 
+    private string FindBundledFile(string fileName)
+    {
+        // Tauri/NSIS can place bundled resources at different relative depths.
+        // Search the complete application install tree instead of assuming resources/<tool>/.
+        try {
+            string[] matches = Directory.GetFiles(installDir, fileName, SearchOption.AllDirectories);
+            string best = "";
+            foreach (string match in matches) {
+                if (String.IsNullOrEmpty(best) || match.Length < best.Length) best = match;
+            }
+            return best;
+        } catch {
+            return "";
+        }
+    }
+
+    private void CopyAdjacentDlls(string sourceFile, string destination)
+    {
+        string sourceDirectory = Path.GetDirectoryName(sourceFile);
+        if (String.IsNullOrEmpty(sourceDirectory) || !Directory.Exists(sourceDirectory)) return;
+        foreach (string dll in Directory.GetFiles(sourceDirectory, "*.dll")) {
+            string target = Path.Combine(destination, Path.GetFileName(dll));
+            File.Copy(dll, target, true);
+        }
+    }
+
     private void FinalizeMediaTools(bool useFfmpeg, bool useWhisper, string destinationRoot, string previousRoot)
     {
-        string resources = Path.Combine(installDir, "resources");
-        string ffmpegSource = Path.Combine(resources, "ffmpeg");
-        string whisperSource = Path.Combine(resources, "whisper");
+        // Validate every selected component before deleting or replacing an existing tool folder.
+        string ffmpegExe = useFfmpeg ? FindBundledFile("ffmpeg.exe") : "";
+        string ffprobeExe = useFfmpeg ? FindBundledFile("ffprobe.exe") : "";
+        string whisperExe = useWhisper ? FindBundledFile("whisper-cli.exe") : "";
+        string whisperModel = useWhisper ? FindBundledFile("ggml-tiny.bin") : "";
+
+        if (useFfmpeg && (String.IsNullOrEmpty(ffmpegExe) || String.IsNullOrEmpty(ffprobeExe)))
+            throw new Exception("FFmpeg/FFprobe não foram encontrados dentro do pacote instalado. O instalador procurou os executáveis em toda a pasta do Edit Master.");
+        if (useWhisper && (String.IsNullOrEmpty(whisperExe) || String.IsNullOrEmpty(whisperModel)))
+            throw new Exception("Whisper.cpp ou o modelo Tiny não foram encontrados dentro do pacote instalado.");
+
         if (useFfmpeg || useWhisper) {
             if (Directory.Exists(destinationRoot)) Directory.Delete(destinationRoot, true);
             Directory.CreateDirectory(destinationRoot);
+
             if (useFfmpeg) {
-                if (!Directory.Exists(ffmpegSource)) throw new Exception("Os arquivos do FFmpeg não foram encontrados no pacote de instalação.");
-                CopyDirectory(ffmpegSource, Path.Combine(destinationRoot, "ffmpeg"));
+                string target = Path.Combine(destinationRoot, "ffmpeg");
+                Directory.CreateDirectory(target);
+                File.Copy(ffmpegExe, Path.Combine(target, "ffmpeg.exe"), true);
+                File.Copy(ffprobeExe, Path.Combine(target, "ffprobe.exe"), true);
+                CopyAdjacentDlls(ffmpegExe, target);
+                CopyAdjacentDlls(ffprobeExe, target);
             }
+
             if (useWhisper) {
-                if (!Directory.Exists(whisperSource)) throw new Exception("Os arquivos do Whisper não foram encontrados no pacote de instalação.");
-                CopyDirectory(whisperSource, Path.Combine(destinationRoot, "whisper"));
+                string target = Path.Combine(destinationRoot, "whisper");
+                Directory.CreateDirectory(target);
+                File.Copy(whisperExe, Path.Combine(target, "whisper-cli.exe"), true);
+                File.Copy(whisperModel, Path.Combine(target, "ggml-tiny.bin"), true);
+                CopyAdjacentDlls(whisperExe, target);
+                CopyAdjacentDlls(whisperModel, target);
             }
+
             string common = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Edit Master");
             Directory.CreateDirectory(common);
             File.WriteAllText(Path.Combine(common, "MediaTools.ini"), "[MediaTools]\r\nPath=" + destinationRoot + "\r\n");
@@ -351,9 +398,17 @@ internal sealed class InstallerForm : Form
             string config = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Edit Master", "MediaTools.ini");
             if (File.Exists(config)) File.Delete(config);
         }
-        if (Directory.Exists(ffmpegSource)) Directory.Delete(ffmpegSource, true);
-        if (Directory.Exists(whisperSource)) Directory.Delete(whisperSource, true);
-        if (!String.IsNullOrEmpty(previousRoot) && !String.IsNullOrEmpty(destinationRoot) && !String.Equals(Path.GetFullPath(previousRoot).TrimEnd('\\'), Path.GetFullPath(destinationRoot).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase) && Directory.Exists(previousRoot))
+
+        // Remove only the temporary resource payloads after successful external installation.
+        string bundledResources = Path.Combine(installDir, "resources");
+        string bundledFfmpeg = Path.Combine(bundledResources, "ffmpeg");
+        string bundledWhisper = Path.Combine(bundledResources, "whisper");
+        if (Directory.Exists(bundledFfmpeg)) Directory.Delete(bundledFfmpeg, true);
+        if (Directory.Exists(bundledWhisper)) Directory.Delete(bundledWhisper, true);
+
+        if (!String.IsNullOrEmpty(previousRoot) && !String.IsNullOrEmpty(destinationRoot) &&
+            !String.Equals(Path.GetFullPath(previousRoot).TrimEnd('\\'), Path.GetFullPath(destinationRoot).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase) &&
+            Directory.Exists(previousRoot))
             Directory.Delete(previousRoot, true);
     }
 
