@@ -313,7 +313,7 @@ internal sealed class InstallerForm : Form
         }
         if (Directory.Exists(ffmpegSource)) Directory.Delete(ffmpegSource, true);
         if (Directory.Exists(whisperSource)) Directory.Delete(whisperSource, true);
-        if (!String.IsNullOrEmpty(previousRoot) && !String.Equals(Path.GetFullPath(previousRoot).TrimEnd('\\'), Path.GetFullPath(destinationRoot).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase) && Directory.Exists(previousRoot))
+        if (!String.IsNullOrEmpty(previousRoot) && !String.IsNullOrEmpty(destinationRoot) && !String.Equals(Path.GetFullPath(previousRoot).TrimEnd('\\'), Path.GetFullPath(destinationRoot).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase) && Directory.Exists(previousRoot))
             Directory.Delete(previousRoot, true);
     }
 
