@@ -105,7 +105,7 @@ internal sealed class InstallerForm : Form
                             using (RegistryKey item = parent.OpenSubKey(name)) {
                                 if (item == null) continue;
                                 string display = Convert.ToString(item.GetValue("DisplayName", ""));
-                                string location = Convert.ToString(item.GetValue("InstallLocation", ""));
+                                string location = Convert.ToString(item.GetValue("InstallLocation", "")).Trim().Trim('"');
                                 if (display.IndexOf("Edit Master", StringComparison.OrdinalIgnoreCase) >= 0 &&
                                     !String.IsNullOrWhiteSpace(location) &&
                                     File.Exists(Path.Combine(location, "Edit Master.exe"))) return location;
@@ -117,7 +117,7 @@ internal sealed class InstallerForm : Form
             try {
                 using (RegistryKey item = hive.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\UninstallEdit Master")) {
                     if (item != null) {
-                        string location = Convert.ToString(item.GetValue("InstallLocation", ""));
+                        string location = Convert.ToString(item.GetValue("InstallLocation", "")).Trim().Trim('"');
                         if (!String.IsNullOrWhiteSpace(location) && File.Exists(Path.Combine(location, "Edit Master.exe"))) return location;
                     }
                 }
