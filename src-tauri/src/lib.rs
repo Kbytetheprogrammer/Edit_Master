@@ -2427,10 +2427,25 @@ fn get_app_version(app: tauri::AppHandle) -> String { app.package_info().version
 fn get_bundled_media_tools(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let resource_dir = app.path().resource_dir()
         .map_err(|error| format!("Não foi possível localizar os recursos instalados: {error}"))?;
-    let ffmpeg = resource_dir.join("resources").join("ffmpeg").join("ffmpeg.exe");
-    let ffprobe = resource_dir.join("resources").join("ffmpeg").join("ffprobe.exe");
-    let whisper = resource_dir.join("resources").join("whisper").join("whisper-cli.exe");
-    let whisper_model = resource_dir.join("resources").join("whisper").join("ggml-tiny.bin");
+
+    // The branded installer can keep large media tools on another drive.
+    // Its small ProgramData pointer lets the app discover them without
+    // requiring symlinks or changing the user's manual path preferences.
+    let program_data = std::env::var_os("PROGRAMDATA")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"));
+    let config_path = program_data.join("Edit Master").join("MediaTools.ini");
+    let external_root = fs::read_to_string(&config_path).ok().and_then(|contents| {
+        contents.lines()
+            .find_map(|line| line.trim().strip_prefix("Path="))
+            .map(PathBuf::from)
+            .filter(|path| path.is_dir())
+    });
+    let media_root = external_root.unwrap_or_else(|| resource_dir.join("resources"));
+    let ffmpeg = media_root.join("ffmpeg").join("ffmpeg.exe");
+    let ffprobe = media_root.join("ffmpeg").join("ffprobe.exe");
+    let whisper = media_root.join("whisper").join("whisper-cli.exe");
+    let whisper_model = media_root.join("whisper").join("ggml-tiny.bin");
     Ok(json!({
         "ffmpegPath": if ffmpeg.is_file() { Some(ffmpeg.to_string_lossy().to_string()) } else { None },
         "ffprobePath": if ffprobe.is_file() { Some(ffprobe.to_string_lossy().to_string()) } else { None },
