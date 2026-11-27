@@ -223,9 +223,8 @@ internal sealed class UninstallerForm : Form
                 if (!File.Exists(nsisUninstaller)) throw new FileNotFoundException("O mecanismo interno de desinstalação não foi encontrado.", nsisUninstaller);
                 ProcessStartInfo psi = new ProcessStartInfo();
                 psi.FileName = nsisUninstaller;
-                psi.Arguments = "/S /EMDELETEAPPDATA=" + (removeLocalData ? "1" : "0");
+                psi.Arguments = "/S /EMDELETEAPPDATA=" + (removeLocalData ? "1" : "0") + " _?=" + installDir;
                 psi.UseShellExecute = true;
-                psi.Verb = "runas";
                 using (Process p = Process.Start(psi)) {
                     p.WaitForExit();
                     exitCode = p.ExitCode;
@@ -295,11 +294,67 @@ internal sealed class UninstallerForm : Form
 
 internal static class UninstallerProgram
 {
+    private static string FindInstallDirectory()
+    {
+        string[] keys = new string[] {
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Edit Master",
+            @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Edit Master"
+        };
+        RegistryKey[] roots = new RegistryKey[] { Registry.LocalMachine, Registry.CurrentUser };
+        foreach (RegistryKey root in roots) {
+            foreach (string key in keys) {
+                try {
+                    using (RegistryKey item = root.OpenSubKey(key)) {
+                        if (item == null) continue;
+                        string location = Convert.ToString(item.GetValue("InstallLocation", "")).Trim().Trim('"');
+                        if (!String.IsNullOrWhiteSpace(location) && File.Exists(Path.Combine(location, "uninstall.exe")))
+                            return location;
+                    }
+                } catch { }
+            }
+        }
+        string[] fallbacks = new string[] {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Edit Master"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Edit Master")
+        };
+        foreach (string candidate in fallbacks)
+            if (File.Exists(Path.Combine(candidate, "uninstall.exe"))) return candidate;
+        throw new DirectoryNotFoundException("A pasta de instalação do Edit Master não foi encontrada no registro do Windows.");
+    }
+
     [STAThread]
     private static void Main()
     {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
+
+        // NSIS calls the registered uninstaller with /UPDATE during an upgrade.
+        // In that case, silently delegate to the internal engine instead of showing
+        // the farewell UI or removing the external branded helper.
+        string[] args = Environment.GetCommandLineArgs();
+        bool updateMode = false;
+        foreach (string arg in args)
+            if (String.Equals(arg, "/UPDATE", StringComparison.OrdinalIgnoreCase)) updateMode = true;
+
+        if (updateMode) {
+            try {
+                string installDir = FindInstallDirectory();
+                ProcessStartInfo psi = new ProcessStartInfo {
+                    FileName = Path.Combine(installDir, "uninstall.exe"),
+                    Arguments = "/S /UPDATE _?=" + installDir,
+                    UseShellExecute = true
+                };
+                using (Process p = Process.Start(psi)) {
+                    p.WaitForExit();
+                    Environment.ExitCode = p.ExitCode;
+                }
+            } catch (Exception ex) {
+                MessageBox.Show("Não foi possível preparar a atualização do Edit Master.\\r\\n\\r\\n" + ex.Message, "Edit Master", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Environment.ExitCode = 1;
+            }
+            return;
+        }
+
         Application.Run(new UninstallerForm());
     }
 }
