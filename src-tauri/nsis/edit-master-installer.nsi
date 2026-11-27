@@ -1014,6 +1014,11 @@ Section Install
     WriteRegStr SHCTX "${UNINSTKEY}" "HelpLink" "${HOMEPAGE}"
   !endif
 
+  ; Remove malformed shortcut filenames left by older builds that omitted path separators.
+  Delete "$SMPROGRAMS\$AppStartMenuFolder${PRODUCTNAME}.lnk"
+  Delete "$SMPROGRAMS${PRODUCTNAME}.lnk"
+  Delete "$DESKTOP${PRODUCTNAME}.lnk"
+
   ; Always create/repair both shortcuts. This also fixes broken shortcuts on upgrades.
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
     Call CreateOrUpdateStartMenuShortcut
