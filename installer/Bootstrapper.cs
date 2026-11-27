@@ -109,11 +109,30 @@ internal sealed class InstallerForm : Form
     [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool ReleaseCapture();
     [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
 
+    private bool HasInstalledExecutable(string location, RegistryKey item)
+    {
+        if (String.IsNullOrWhiteSpace(location) || !Directory.Exists(location)) return false;
+        try {
+            if (item != null) {
+                string registeredBinary = Convert.ToString(item.GetValue("MainBinaryName", "")).Trim().Trim('"');
+                if (!String.IsNullOrWhiteSpace(registeredBinary) &&
+                    File.Exists(Path.Combine(location, Path.GetFileName(registeredBinary)))) return true;
+            }
+        } catch { }
+        // Current Cargo package name is edit-master; keep the legacy display-name
+        // executable as a fallback for installations created by older builds.
+        string[] candidates = new string[] { "edit-master.exe", "Edit Master.exe", "Edit-Master.exe" };
+        foreach (string candidate in candidates) {
+            if (File.Exists(Path.Combine(location, candidate))) return true;
+        }
+        return false;
+    }
+
     private string FindExistingInstall()
     {
         string[] roots = new string[] {
-            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-            @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+            @"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
+            @"SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
         };
         RegistryKey[] hives = new RegistryKey[] { Registry.LocalMachine, Registry.CurrentUser };
         foreach (RegistryKey hive in hives)
@@ -129,24 +148,23 @@ internal sealed class InstallerForm : Form
                                 string display = Convert.ToString(item.GetValue("DisplayName", ""));
                                 string location = Convert.ToString(item.GetValue("InstallLocation", "")).Trim().Trim('"');
                                 if (display.IndexOf("Edit Master", StringComparison.OrdinalIgnoreCase) >= 0 &&
-                                    !String.IsNullOrWhiteSpace(location) &&
-                                    File.Exists(Path.Combine(location, "Edit Master.exe"))) return location;
+                                    HasInstalledExecutable(location, item)) return location;
                             }
                         }
                     }
                 } catch { }
             }
             try {
-                using (RegistryKey item = hive.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\UninstallEdit Master")) {
+                using (RegistryKey item = hive.OpenSubKey(@"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\UninstallEdit Master")) {
                     if (item != null) {
                         string location = Convert.ToString(item.GetValue("InstallLocation", "")).Trim().Trim('"');
-                        if (!String.IsNullOrWhiteSpace(location) && File.Exists(Path.Combine(location, "Edit Master.exe"))) return location;
+                        if (HasInstalledExecutable(location, item)) return location;
                     }
                 }
             } catch { }
         }
         string programFiles = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Edit Master");
-        if (File.Exists(Path.Combine(programFiles, "Edit Master.exe"))) return programFiles;
+        if (HasInstalledExecutable(programFiles, null)) return programFiles;
         return "";
     }
 
