@@ -164,8 +164,15 @@ jobs:
           $allScriptText = ($scripts | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
           $ffmpegEntries = [regex]::Matches($allScriptText, '(?im)^\s*File\b[^\r\n]*ffmpeg\.exe')
           $ffprobeEntries = [regex]::Matches($allScriptText, '(?im)^\s*File\b[^\r\n]*ffprobe\.exe')
+          $brandedUninstallerEntries = [regex]::Matches($allScriptText, '(?im)^\s*File\b[^\r\n]*EditMasterUninstaller\.exe')
           Write-Host "Generated NSIS scripts:"
           $scripts | ForEach-Object { Write-Host $_.FullName }
+          if ($brandedUninstallerEntries.Count -lt 1) {
+            Write-Host "Uninstaller-related entries found in generated NSIS scripts:"
+            ($allScriptText -split "`r?`n" | Where-Object { $_ -match '(?i)uninstaller|EditMasterUninstaller' }) | ForEach-Object { Write-Host $_ }
+            throw "The branded EditMasterUninstaller.exe was not embedded in the NSIS payload."
+          }
+          Write-Host "Verified branded uninstaller is embedded in the NSIS payload."
           if ($ffmpegEntries.Count -lt 1 -or $ffprobeEntries.Count -lt 1) {
             Write-Host "FFmpeg-related entries found in generated NSIS scripts:"
             ($allScriptText -split "`r?`n" | Where-Object { $_ -match '(?i)ffmpeg|ffprobe' }) | ForEach-Object { Write-Host $_ }
