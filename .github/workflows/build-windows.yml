@@ -48,13 +48,25 @@ jobs:
           New-Item -ItemType Directory -Force -Path $ffmpegDir, $whisperDir | Out-Null
 
           $ffmpegZip = Join-Path $env:RUNNER_TEMP "ffmpeg.zip"
-          $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"
+          $ffmpegReleaseApi = "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest"
+          $ffmpegHeaders = @{ "User-Agent" = "EditMaster-CI"; "Accept" = "application/vnd.github+json" }
+          Write-Host "Resolving the latest FFmpeg release asset through the GitHub API..."
+          $ffmpegRelease = Invoke-RestMethod -Uri $ffmpegReleaseApi -Headers $ffmpegHeaders -TimeoutSec 60
+          $ffmpegAsset = $ffmpegRelease.assets | Where-Object { $_.name -eq "ffmpeg-master-latest-win64-gpl.zip" } | Select-Object -First 1
+          if (-not $ffmpegAsset -or [string]::IsNullOrWhiteSpace($ffmpegAsset.browser_download_url)) {
+            $available = ($ffmpegRelease.assets | Where-Object { $_.name -match "win64-gpl.*zip" } | ForEach-Object { $_.name }) -join ", "
+            throw "The latest FFmpeg release does not contain the expected win64 GPL ZIP. Available matching assets: $available"
+          }
+          $ffmpegUrl = $ffmpegAsset.browser_download_url
+          Write-Host "Selected FFmpeg release: $($ffmpegRelease.tag_name)"
+          Write-Host "Selected FFmpeg asset: $($ffmpegAsset.name)"
+          Write-Host "Asset URL: $ffmpegUrl"
           $downloaded = $false
           for ($attempt = 1; $attempt -le 5; $attempt++) {
             try {
               Remove-Item $ffmpegZip -Force -ErrorAction SilentlyContinue
               Write-Host "Downloading FFmpeg (attempt $attempt/5)..."
-              Invoke-WebRequest -Uri $ffmpegUrl -OutFile $ffmpegZip -TimeoutSec 180
+              Invoke-WebRequest -Uri $ffmpegUrl -OutFile $ffmpegZip -Headers @{ "User-Agent" = "EditMaster-CI" } -TimeoutSec 300
               if (-not (Test-Path $ffmpegZip) -or (Get-Item $ffmpegZip).Length -lt 1000000) { throw "FFmpeg download is missing or unexpectedly small." }
               $stream = [System.IO.File]::OpenRead($ffmpegZip)
               try {
