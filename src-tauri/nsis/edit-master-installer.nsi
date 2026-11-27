@@ -51,6 +51,7 @@ Var EM_FfmpegCheck
 Var EM_WhisperCheck
 Var EM_OpenCheck
 Var EM_DirInput
+Var EM_InstallMarker
 
 !define WEBVIEW2APPGUID "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
 
@@ -730,6 +731,12 @@ LangString choowHowToInstall 0 ""
 {{/each}}
 
 Function .onInit
+  ; Read the unique marker path supplied by the branded bootstrapper.
+  ${GetOptions} $CMDLINE "/EMMARKER=" $EM_InstallMarker
+  ${If} ${Errors}
+    StrCpy $EM_InstallMarker ""
+  ${EndIf}
+
   ; Read exact component choices passed by the branded bootstrapper.
   ${GetOptions} $CMDLINE "/EMFFMPEG=" $EM_FfmpegSelected
   ${IfNot} ${Errors}
@@ -1022,6 +1029,12 @@ Section Install
   !ifmacrodef NSIS_HOOK_POSTINSTALL
     !insertmacro NSIS_HOOK_POSTINSTALL
   !endif
+
+  ; Report the actual final install directory to the outer bootstrapper.
+  ; The marker filename is unique per setup run, avoiding stale registry guesses.
+  ${If} $EM_InstallMarker != ""
+    WriteINIStr "$EM_InstallMarker" "Install" "Path" "$INSTDIR"
+  ${EndIf}
 
   ; Auto close this page for passive mode
   ${If} $PassiveMode = 1
