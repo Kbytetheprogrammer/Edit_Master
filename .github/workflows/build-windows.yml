@@ -126,7 +126,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $compiler = Join-Path $env:WINDIR "Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe"
+          $compiler = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe"
           if (-not (Test-Path $compiler)) { throw ".NET Framework C# compiler was not found: $compiler" }
           $resourceDir = Join-Path $env:GITHUB_WORKSPACE "src-tauri/resources/uninstaller"
           New-Item -ItemType Directory -Force -Path $resourceDir | Out-Null
