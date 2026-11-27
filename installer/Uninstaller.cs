@@ -38,7 +38,7 @@ internal sealed class UninstallerForm : Form
         BackColor = bg;
         Font = new Font("Segoe UI", 10f);
         ShowInTaskbar = true;
-        try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
+        try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
         Panel top = new Panel { Dock = DockStyle.Top, Height = 65, BackColor = Color.FromArgb(12, 12, 12) };
         top.MouseDown += DragWindow;
@@ -252,8 +252,8 @@ internal sealed class UninstallerForm : Form
     private string FindInstallDirectory()
     {
         string[] keys = new string[] {
-            @"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Edit Master",
-            @"SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Edit Master"
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Edit Master",
+            @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Edit Master"
         };
         RegistryKey[] roots = new RegistryKey[] { Registry.LocalMachine, Registry.CurrentUser };
         foreach (RegistryKey root in roots) {
