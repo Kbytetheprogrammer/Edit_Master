@@ -122,6 +122,26 @@ jobs:
           Invoke-WebRequest "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin" -OutFile (Join-Path $whisperDir "ggml-tiny.bin")
           if ((Get-Item (Join-Path $whisperDir "ggml-tiny.bin")).Length -lt 1000000) { throw "Modelo Whisper baixado parece inválido." }
 
+      - name: Build branded Edit Master uninstaller
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $compiler = Join-Path $env:WINDIR "Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe"
+          if (-not (Test-Path $compiler)) { throw ".NET Framework C# compiler was not found: $compiler" }
+          $resourceDir = Join-Path $env:GITHUB_WORKSPACE "src-tauri/resources/uninstaller"
+          New-Item -ItemType Directory -Force -Path $resourceDir | Out-Null
+          $output = Join-Path $resourceDir "EditMasterUninstaller.exe"
+          $source = Join-Path $env:GITHUB_WORKSPACE "installer/Uninstaller.cs"
+          $icon = Join-Path $env:GITHUB_WORKSPACE "src-tauri/icons/icon-m.ico"
+          $manifest = Join-Path $env:GITHUB_WORKSPACE "installer/Bootstrapper.manifest"
+          if (-not (Test-Path $source)) { throw "Branded uninstaller source is missing: $source" }
+          if (-not (Test-Path $manifest)) { throw "Uninstaller elevation manifest is missing: $manifest" }
+          & $compiler /nologo /target:winexe /platform:x64 /optimize+ "/out:$output" "/win32icon:$icon" "/win32manifest:$manifest" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll $source
+          if ($LASTEXITCODE -ne 0) { throw "Failed to compile the branded uninstaller." }
+          if (-not (Test-Path $output)) { throw "Branded uninstaller executable was not created." }
+          Write-Host "Branded uninstaller ready: $output"
+          Write-Host ("Uninstaller size: {0:N1} MB" -f ((Get-Item $output).Length / 1MB))
+
       - name: Install JavaScript dependencies
         run: npm ci
 
