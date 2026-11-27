@@ -832,22 +832,33 @@ fn check_local_update(
 fn launch_uninstaller(app: tauri::AppHandle) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
-        // Always launch the branded Edit Master uninstaller first.
-        // The NSIS uninstall.exe is an internal engine and must only be started
-        // silently by the branded WinForms front-end.
-        let program_data = std::env::var_os("ProgramData")
-            .map(std::path::PathBuf::from)
-            .ok_or("Não foi possível localizar a pasta ProgramData do Windows.")?;
-        let branded = program_data.join("Edit Master").join("EditMasterUninstaller.exe");
-        if !branded.is_file() {
+        let current_exe = std::env::current_exe()
+            .map_err(|e| format!("Não foi possível localizar o Edit Master: {e}"))?;
+        let install_dir = current_exe.parent()
+            .ok_or("Não foi possível localizar a pasta do aplicativo.")?;
+        let internal = install_dir.join("uninstall.exe");
+
+        // Prefer the branded front-end. If an older/broken install is missing it,
+        // fall back to the NSIS engine so the user is never locked out of uninstalling.
+        let program_data = std::env::var_os("ProgramData").map(std::path::PathBuf::from);
+        let branded = program_data
+            .map(|root| root.join("Edit Master").join("EditMasterUninstaller.exe"));
+        let launcher = branded.as_ref()
+            .filter(|path| path.is_file())
+            .unwrap_or(&internal);
+
+        if !launcher.is_file() {
             return Err(format!(
-                "O desinstalador visual do Edit Master não foi encontrado: {}. Reinstale o aplicativo usando o instalador oficial para reparar os arquivos.",
-                branded.display()
+                "Nenhum desinstalador foi encontrado. Arquivos verificados: {}{}",
+                branded.as_ref().map(|p| p.display().to_string()).unwrap_or_else(|| "ProgramData indisponível".into()),
+                format!("; {}", internal.display())
             ));
         }
-        Command::new(&branded)
+
+        Command::new(launcher)
             .spawn()
-            .map_err(|e| format!("Falha ao iniciar o desinstalador personalizado: {e}"))?;
+            .map_err(|e| format!("Falha ao iniciar o desinstalador: {e}"))?;
+
         std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_millis(700));
             app.exit(0);
