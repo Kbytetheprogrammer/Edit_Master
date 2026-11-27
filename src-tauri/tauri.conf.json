@@ -41,6 +41,21 @@
     ],
     "resources": [
       "resources/**/*"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon-m.ico",
+        "uninstallerIcon": "icons/icon-m.ico",
+        "installerHooks": "nsis/installer-hooks.nsh",
+        "startMenuFolder": "Edit Master",
+        "displayLanguageSelector": true,
+        "languages": [
+          "PortugueseBR",
+          "English",
+          "Spanish"
+        ],
+        "template": "nsis/edit-master-installer.nsi"
+      }
+    }
   }
 }

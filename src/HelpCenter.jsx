@@ -81,7 +81,7 @@ const lessons = [
       'Abra o AI Hub e selecione a mídia que deseja transcrever.',
       'É possível importar legendas SRT existentes e aplicar os trechos ao projeto.',
       'Os horários definem quando cada legenda aparece e desaparece.',
-      'O instalador da versão candidata inclui whisper-cli.exe e o modelo Tiny, e o aplicativo tenta detectá-los automaticamente. Se algum componente não for encontrado, selecione o executável e o modelo manualmente nas configurações do AI Hub.',
+      'O setup permite instalar opcionalmente whisper-cli.exe e o modelo Tiny. Se você pular essa etapa, poderá selecionar o executável e o modelo manualmente nas configurações do AI Hub.',
       'Revise nomes, pontuação, sincronização e tradução antes de usar as legendas.'
     ]
   },
@@ -114,7 +114,7 @@ const lessons = [
       'Abra Exportar MP4. FFmpeg e FFprobe incluídos no instalador são detectados automaticamente; se necessário, selecione um ffmpeg.exe confiável manualmente.',
       'A predefinição de destino é Full HD 1920 × 1080 a 60 FPS, com vídeo H.264 e áudio AAC.',
       'Escolha um destino com extensão .mp4 e aguarde a conclusão.',
-      'A renderização atual concatena os segmentos visuais em sequência e mistura áudio de forma básica. Ela ainda não reproduz integralmente todas as camadas, transições e títulos da prévia.'
+      'A exportação aplica correções estáticas de brilho, contraste, saturação e aquecimento, além de posição, escala, opacidade e rotação. Keyframes animados e composição em múltiplas camadas ainda não são renderizados.'
     ]
   },
   {
@@ -168,7 +168,7 @@ function HelpCenter({ onClose }) {
       </div>
       <div className="help-course-note">
         <b>Nota sobre a versão 1.0</b>
-        <p>Este curso descreve o comportamento da versão candidata. O instalador inclui FFmpeg/FFprobe e Whisper Tiny; a detecção automática desses recursos ainda precisa ser validada no Windows. A exportação MP4 ainda não reproduz todas as sobreposições, transições, títulos e animações da prévia. O atualizador pela internet também precisa ser implementado e validado antes do lançamento final.</p>
+        <p>Este curso descreve o comportamento da versão candidata. O setup permite escolher separadamente a instalação de FFmpeg/FFprobe e Whisper Tiny. Se um componente não for instalado, os recursos que dependem dele ficam indisponíveis até que o usuário selecione uma instalação própria. A exportação MP4 aplica correções de cor, transformações estáticas e textos SRT/títulos; keyframes animados e composição em múltiplas camadas ainda não são renderizados. O atualizador pela internet também precisa ser implementado e validado antes do lançamento final.</p>
       </div>
       <button className="export-button" onClick={onClose}>Concluir curso</button>
     </div>

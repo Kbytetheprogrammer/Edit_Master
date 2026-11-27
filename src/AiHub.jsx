@@ -57,15 +57,19 @@ function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = []
     let cancelled = false;
     invoke('get_bundled_media_tools').then(tools => {
       if (cancelled || !tools) return;
-      if (tools.whisperExecutable && !safeStorageGet(WHISPER_EXE_KEY)) {
+      const savedWhisperExe = safeStorageGet(WHISPER_EXE_KEY);
+      const savedWhisperModel = safeStorageGet(WHISPER_MODEL_KEY);
+      const savedFfmpeg = safeStorageGet(FFMPEG_KEY);
+      const installerManaged = path => path && /[\\/]resources[\\/](whisper|ffmpeg)[\\/]|[\\/]Edit Master[\\/]MediaTools[\\/](whisper|ffmpeg)[\\/]/i.test(path);
+      if (tools.whisperExecutable && (!savedWhisperExe || installerManaged(savedWhisperExe))) {
         setWhisperExecutable(tools.whisperExecutable);
         safeStorageSet(WHISPER_EXE_KEY, tools.whisperExecutable);
       }
-      if (tools.whisperModelPath && !safeStorageGet(WHISPER_MODEL_KEY)) {
+      if (tools.whisperModelPath && (!savedWhisperModel || installerManaged(savedWhisperModel))) {
         setWhisperModel(tools.whisperModelPath);
         safeStorageSet(WHISPER_MODEL_KEY, tools.whisperModelPath);
       }
-      if (tools.ffmpegPath && !safeStorageGet(FFMPEG_KEY)) {
+      if (tools.ffmpegPath && (!savedFfmpeg || installerManaged(savedFfmpeg))) {
         setFfmpegPath(tools.ffmpegPath);
         safeStorageSet(FFMPEG_KEY, tools.ffmpegPath);
       }
@@ -146,7 +150,7 @@ function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = []
           targetLanguage,
         });
       } else if (provider === 'local') {
-        if (!whisperExecutable || !whisperModel) throw new Error('Os componentes Whisper não foram encontrados no instalador. Reinstale o Edit Master ou selecione whisper-cli.exe e o modelo Whisper .bin manualmente.');
+        if (!whisperExecutable || !whisperModel) throw new Error('Os componentes Whisper não estão instalados. Selecione whisper-cli.exe e o modelo Whisper .bin manualmente ou instale-os com o pacote opcional.');
         srtText = await invoke('transcribe_local_whisper', {
           mediaPath: targetMedia.sourcePath,
           mediaType: targetMedia.type,
@@ -192,7 +196,7 @@ function AiHub({ mediaItems = [], selectedMediaId, onSelectMedia, subtitles = []
       <div className="ai-section-title"><Cpu size={15}/> <b>Modelo local Whisper.cpp</b><span className="ai-key-status connected">Offline</span></div>
       <div className="ai-path-row"><div><b>Executável whisper-cli.exe</b><small>{whisperExecutable || 'Detectando Whisper incluído no instalador…'}</small></div><button className="subtle-button" onClick={() => selectPath('whisper')}>Selecionar</button></div>
       <div className="ai-path-row"><div><b>Modelo de reconhecimento (.bin)</b><small>{whisperModel || 'Detectando modelo Tiny incluído no instalador…'}</small></div><button className="subtle-button" onClick={() => selectPath('model')}>Selecionar</button></div>
-      <div className="ai-path-row"><div><b>FFmpeg (opcional para áudio; necessário para vídeo)</b><small>{ffmpegPath || 'FFmpeg incluído no instalador será detectado automaticamente'}</small></div><button className="subtle-button" onClick={() => selectPath('ffmpeg')}>Selecionar</button></div>
+      <div className="ai-path-row"><div><b>FFmpeg (opcional para áudio; necessário para vídeo)</b><small>{ffmpegPath || 'FFmpeg instalado pelo setup será detectado automaticamente'}</small></div><button className="subtle-button" onClick={() => selectPath('ffmpeg')}>Selecionar</button></div>
     </section>}
     <section className="ai-config-section">
       <div className="ai-section-title"><FileAudio size={15}/> <b>Mídia e tarefa</b></div>

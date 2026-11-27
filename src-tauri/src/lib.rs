@@ -1423,6 +1423,12 @@ struct ExportClipInput {
     #[serde(default)] color_brightness: Option<f64>,
     #[serde(default)] color_contrast: Option<f64>,
     #[serde(default)] color_saturation: Option<f64>,
+    #[serde(default)] color_warmth: Option<f64>,
+    #[serde(default)] overlay_x: Option<f64>,
+    #[serde(default)] overlay_y: Option<f64>,
+    #[serde(default)] overlay_scale: Option<f64>,
+    #[serde(default)] overlay_opacity: Option<f64>,
+    #[serde(default)] overlay_rotation: Option<f64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1436,12 +1442,71 @@ struct ExportTimelineRequest {
     #[serde(default = "default_export_height")] height: u32,
     #[serde(default = "default_export_fps")] fps: u32,
     #[serde(default = "default_export_crf")] crf: u32,
+    #[serde(default)] subtitles: Vec<ProjectSubtitle>,
 }
 
 fn default_export_width() -> u32 { 1920 }
 fn default_export_height() -> u32 { 1080 }
 fn default_export_fps() -> u32 { 60 }
 fn default_export_crf() -> u32 { 20 }
+
+fn build_export_subtitle_srt(
+    subtitles: &[ProjectSubtitle],
+    clips: &[&ExportClipInput],
+    render_durations: &[f64],
+) -> String {
+    let mut cues: Vec<(f64, f64, String)> = Vec::new();
+    let mut timeline_cursor = 0.0_f64;
+
+    for (index, clip) in clips.iter().enumerate() {
+        let source_start = clip.start.max(0.0);
+        let source_end = clip.end.min(clip.duration).max(source_start);
+        let speed = if clip.media_type == "image" { 1.0 } else { clip.playback_speed.unwrap_or(1.0).clamp(0.25, 2.0) };
+
+        for cue in subtitles.iter().filter(|cue| cue.media_id == clip.media_id) {
+            if !cue.start.is_finite() || !cue.end.is_finite() || cue.end <= cue.start {
+                continue;
+            }
+            let overlap_start = cue.start.max(source_start);
+            let overlap_end = cue.end.min(source_end);
+            let text = cue.text.replace("\r\n", "\n").replace('\r', "\n").replace('\0', "");
+            if overlap_end <= overlap_start || text.trim().is_empty() {
+                continue;
+            }
+            let output_start = timeline_cursor + (overlap_start - source_start) / speed;
+            let output_end = timeline_cursor + (overlap_end - source_start) / speed;
+            cues.push((output_start, output_end, text));
+        }
+
+        timeline_cursor += render_durations.get(index).copied().unwrap_or(0.0).max(0.0);
+    }
+
+    cues.sort_by(|left, right| left.0.total_cmp(&right.0));
+    let mut srt = String::new();
+    for (index, (start, end, text)) in cues.into_iter().enumerate() {
+        if end <= start {
+            continue;
+        }
+        srt.push_str(&format!(
+            "{}\n{} --> {}\n{}\n\n",
+            index + 1,
+            srt_timestamp(start),
+            srt_timestamp(end),
+            text
+        ));
+    }
+    srt
+}
+
+
+fn warmth_color_matrix(value: f64) -> [f64; 9] {
+    let warmth = value.clamp(0.0, 100.0) / 100.0 * 0.45;
+    [
+        1.0 - warmth + warmth * 0.393, warmth * 0.769, warmth * 0.189,
+        warmth * 0.349, 1.0 - warmth + warmth * 0.686, warmth * 0.168,
+        warmth * 0.272, warmth * 0.534, 1.0 - warmth + warmth * 0.131,
+    ]
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -2097,12 +2162,26 @@ fn atempo_chain(speed: f64) -> String {
 fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResult, String> {
     let ffmpeg = PathBuf::from(&request.ffmpeg_path);
     if !ffmpeg.is_file() { return Err("Selecione um ffmpeg.exe válido nas configurações de exportação.".into()); }
+    let ffmpeg = if ffmpeg.is_absolute() {
+        ffmpeg
+    } else {
+        std::env::current_dir()
+            .map_err(|error| format!("Não foi possível identificar a pasta atual: {error}"))?
+            .join(ffmpeg)
+    };
     let width = request.width.clamp(640, 3840) / 2 * 2;
     let height = request.height.clamp(360, 2160) / 2 * 2;
     let fps = request.fps.clamp(24, 60);
     let crf = request.crf.clamp(16, 30);
-    let output = PathBuf::from(&request.output_path);
-    if output.extension().and_then(|v| v.to_str()).map(|v| !v.eq_ignore_ascii_case("mp4")).unwrap_or(true) { return Err("O arquivo de saída deve terminar em .mp4.".into()); }
+    let requested_output = PathBuf::from(&request.output_path);
+    if requested_output.extension().and_then(|v| v.to_str()).map(|v| !v.eq_ignore_ascii_case("mp4")).unwrap_or(true) { return Err("O arquivo de saída deve terminar em .mp4.".into()); }
+    let output = if requested_output.is_absolute() {
+        requested_output
+    } else {
+        std::env::current_dir()
+            .map_err(|error| format!("Não foi possível identificar a pasta atual: {error}"))?
+            .join(requested_output)
+    };
     if let Some(parent) = output.parent() { fs::create_dir_all(parent).map_err(|error| error.to_string())?; }
     let media_map = request.media.iter().map(|media| (media.id.as_str(), PathBuf::from(&media.source_path))).collect::<HashMap<_, _>>();
     let main_clips = request.clips.iter().filter(|clip| clip.media_type == "video" || clip.media_type == "image").collect::<Vec<_>>();
@@ -2141,6 +2220,9 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
     }
 
     let mut command = Command::new(&ffmpeg);
+    // Run from the temp folder so the generated SRT can be referenced by its
+    // safe ASCII filename, independent of apostrophes or accents in the user path.
+    command.current_dir(std::env::temp_dir());
     command.args(["-y", "-hide_banner", "-loglevel", "error"]);
     for (index, clip) in main_clips.iter().enumerate() {
         if clip.media_type == "image" {
@@ -2179,7 +2261,23 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         let brightness = ((clip.color_brightness.unwrap_or(100.0).clamp(50.0, 150.0) - 100.0) / 100.0).clamp(-0.5, 0.5);
         let contrast = (clip.color_contrast.unwrap_or(100.0).clamp(50.0, 150.0) / 100.0).clamp(0.5, 1.5);
         let saturation = (clip.color_saturation.unwrap_or(100.0).clamp(0.0, 200.0) / 100.0).clamp(0.0, 2.0);
-        filters.push(format!("[{index}:v:0]setpts=PTS/{speed:.4},fps={fps},scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,eq=brightness={brightness:.4}:contrast={contrast:.4}:saturation={saturation:.4},format=yuv420p[v{index}]"));
+        let [sepia_rr, sepia_rg, sepia_rb, sepia_gr, sepia_gg, sepia_gb, sepia_br, sepia_bg, sepia_bb] =
+            warmth_color_matrix(clip.color_warmth.unwrap_or(0.0));
+        let overlay_x = clip.overlay_x.unwrap_or(50.0).clamp(0.0, 100.0);
+        let overlay_y = clip.overlay_y.unwrap_or(50.0).clamp(0.0, 100.0);
+        let overlay_scale = (clip.overlay_scale.unwrap_or(100.0).clamp(10.0, 300.0) / 100.0).clamp(0.1, 3.0);
+        let overlay_opacity = (clip.overlay_opacity.unwrap_or(100.0).clamp(0.0, 100.0) / 100.0).clamp(0.0, 1.0);
+        let overlay_rotation = clip.overlay_rotation.unwrap_or(0.0).clamp(-3600.0, 3600.0);
+        let offset_x = (overlay_x - 50.0) * 1.2;
+        let offset_y = (overlay_y - 50.0) * 1.2;
+        filters.push(format!(
+            "[{index}:v:0]setpts=PTS/{speed:.4},fps={fps},scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,eq=brightness={brightness:.4}:contrast={contrast:.4}:saturation={saturation:.4},colorchannelmixer=rr={sepia_rr:.5}:rg={sepia_rg:.5}:rb={sepia_rb:.5}:gr={sepia_gr:.5}:gg={sepia_gg:.5}:gb={sepia_gb:.5}:br={sepia_br:.5}:bg={sepia_bg:.5}:bb={sepia_bb:.5},format=rgba,scale=iw*{overlay_scale:.4}:ih*{overlay_scale:.4},rotate={:.6}:c=black@0:ow=rotw(iw):oh=roth(ih),colorchannelmixer=aa={overlay_opacity:.4}[fg{index}]",
+            overlay_rotation.to_radians()
+        ));
+        filters.push(format!("color=c=black:s={width}x{height}:r={fps}:d={:.4},format=rgba[bg{index}]", render_durations[index]));
+        filters.push(format!(
+            "[bg{index}][fg{index}]overlay=x=(W-w)/2+W*{offset_x:.4}/100:y=(H-h)/2+H*{offset_y:.4}/100:shortest=1:format=auto,format=yuv420p[v{index}]"
+        ));
         video_labels.push(format!("[v{index}]"));
         let audio_index = audio_input_indices[index];
         let gain = if clip.audio_muted.unwrap_or(false) { 0.0 } else { clip.audio_gain.unwrap_or(1.0).clamp(0.0, 2.0) };
@@ -2192,7 +2290,7 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         filters.push(chain);
         base_audio_labels.push(format!("[a{index}]"));
     }
-    filters.push(format!("{}concat=n={}:v=1:a=1[vout][abase]", video_labels.iter().zip(base_audio_labels.iter()).map(|(v,a)| format!("{v}{a}")).collect::<String>(), main_clips.len()));
+    filters.push(format!("{}concat=n={}:v=1:a=1[vbase][abase]", video_labels.iter().zip(base_audio_labels.iter()).map(|(v,a)| format!("{v}{a}")).collect::<String>(), main_clips.len()));
     let total_duration: f64 = render_durations.iter().sum();
     let mut extra_audio_labels = Vec::new();
     // Audio items are placed sequentially from the beginning of the soundtrack. This first
@@ -2220,10 +2318,35 @@ fn export_timeline_blocking(request: ExportTimelineRequest) -> Result<ExportResu
         let labels = format!("[abase]{}", extra_audio_labels.join(""));
         filters.push(format!("{labels}amix=inputs={}:duration=first:dropout_transition=0[aout]", extra_audio_labels.len()+1));
     }
+    let subtitle_content = build_export_subtitle_srt(&request.subtitles, &main_clips, &render_durations);
+    let subtitle_path = if subtitle_content.is_empty() {
+        None
+    } else {
+        let path = std::env::temp_dir().join(format!("edit-master-subtitles-{}.srt", Uuid::new_v4()));
+        if let Err(error) = fs::write(&path, subtitle_content.as_bytes()) {
+            let _ = fs::remove_file(&path);
+            return Err(format!("Não foi possível preparar as legendas para exportação: {error}"));
+        }
+        let filename = path.file_name()
+            .and_then(|name| name.to_str())
+            .ok_or("Não foi possível preparar o nome temporário das legendas.")?;
+        filters.push(format!(
+            "[vbase]subtitles=filename='{}':force_style='FontName=Arial,FontSize=24,Outline=2,Shadow=1,Alignment=2,MarginV=32'[vout]",
+            filename
+        ));
+        Some(path)
+    };
+    if subtitle_path.is_none() {
+        filters.push("[vbase]null[vout]".into());
+    }
     let filter_graph = filters.join(";");
     command.args(["-filter_complex", &filter_graph, "-map", "[vout]", "-map", "[aout]", "-c:v", "libx264", "-preset", "fast", "-crf", &crf.to_string(), "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"]);
     command.arg(&output);
-    let result = command.output().map_err(|error| format!("Não foi possível iniciar FFmpeg: {error}"))?;
+    let command_result = command.output();
+    if let Some(path) = subtitle_path.as_ref() {
+        let _ = fs::remove_file(path);
+    }
+    let result = command_result.map_err(|error| format!("Não foi possível iniciar FFmpeg: {error}"))?;
     if !result.status.success() {
         let details = String::from_utf8_lossy(&result.stderr);
         return Err(format!("A exportação MP4 falhou: {}", details.chars().take(1200).collect::<String>()));
@@ -2304,10 +2427,25 @@ fn get_app_version(app: tauri::AppHandle) -> String { app.package_info().version
 fn get_bundled_media_tools(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let resource_dir = app.path().resource_dir()
         .map_err(|error| format!("Não foi possível localizar os recursos instalados: {error}"))?;
-    let ffmpeg = resource_dir.join("resources").join("ffmpeg").join("ffmpeg.exe");
-    let ffprobe = resource_dir.join("resources").join("ffmpeg").join("ffprobe.exe");
-    let whisper = resource_dir.join("resources").join("whisper").join("whisper-cli.exe");
-    let whisper_model = resource_dir.join("resources").join("whisper").join("ggml-tiny.bin");
+
+    // The branded installer can keep large media tools on another drive.
+    // Its small ProgramData pointer lets the app discover them without
+    // requiring symlinks or changing the user's manual path preferences.
+    let program_data = std::env::var_os("PROGRAMDATA")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(r"C:\ProgramData"));
+    let config_path = program_data.join("Edit Master").join("MediaTools.ini");
+    let external_root = fs::read_to_string(&config_path).ok().and_then(|contents| {
+        contents.lines()
+            .find_map(|line| line.trim().strip_prefix("Path="))
+            .map(PathBuf::from)
+            .filter(|path| path.is_dir())
+    });
+    let media_root = external_root.unwrap_or_else(|| resource_dir.join("resources"));
+    let ffmpeg = media_root.join("ffmpeg").join("ffmpeg.exe");
+    let ffprobe = media_root.join("ffmpeg").join("ffprobe.exe");
+    let whisper = media_root.join("whisper").join("whisper-cli.exe");
+    let whisper_model = media_root.join("whisper").join("ggml-tiny.bin");
     Ok(json!({
         "ffmpegPath": if ffmpeg.is_file() { Some(ffmpeg.to_string_lossy().to_string()) } else { None },
         "ffprobePath": if ffprobe.is_file() { Some(ffprobe.to_string_lossy().to_string()) } else { None },
@@ -2503,5 +2641,102 @@ mod ffprobe_audio_detection_tests {
         let error = probe_audio_result(false, "", "Invalid data found").unwrap_err();
         assert!(error.contains("FFprobe"));
         assert!(error.contains("Invalid data found"));
+    }
+}
+
+#[cfg(test)]
+mod warmth_color_tests {
+    use super::warmth_color_matrix;
+
+    #[test]
+    fn zero_warmth_preserves_original_rgb_channels() {
+        assert_eq!(warmth_color_matrix(0.0), [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn warmth_is_clamped_to_the_preview_range() {
+        assert_eq!(warmth_color_matrix(-10.0), warmth_color_matrix(0.0));
+        assert_eq!(warmth_color_matrix(150.0), warmth_color_matrix(100.0));
+    }
+
+    #[test]
+    fn positive_warmth_blends_in_the_sepia_matrix() {
+        let matrix = warmth_color_matrix(100.0);
+        assert!(matrix[1] > 0.0);
+        assert!(matrix[3] > 0.0);
+        assert!(matrix[7] > 0.0);
+        assert!(matrix[0] < 1.0);
+    }
+}
+
+#[cfg(test)]
+mod subtitle_export_tests {
+    use super::{build_export_subtitle_srt, srt_timestamp, ExportClipInput, ProjectSubtitle};
+
+    fn clip(media_id: &str, media_type: &str, start: f64, end: f64, duration: f64, speed: f64) -> ExportClipInput {
+        ExportClipInput {
+            media_id: media_id.to_string(),
+            media_type: media_type.to_string(),
+            duration,
+            start,
+            end,
+            audio_gain: None,
+            audio_fade_in: None,
+            audio_fade_out: None,
+            audio_muted: None,
+            playback_speed: Some(speed),
+            color_brightness: None,
+            color_contrast: None,
+            color_saturation: None,
+            color_warmth: None,
+            overlay_x: None,
+            overlay_y: None,
+            overlay_scale: None,
+            overlay_opacity: None,
+            overlay_rotation: None,
+        }
+    }
+
+    fn cue(media_id: &str, start: f64, end: f64, text: &str) -> ProjectSubtitle {
+        ProjectSubtitle {
+            id: "cue-1".to_string(),
+            media_id: media_id.to_string(),
+            start,
+            end,
+            text: text.to_string(),
+            kind: "subtitle".to_string(),
+        }
+    }
+
+    #[test]
+    fn formats_srt_timestamps_to_milliseconds() {
+        assert_eq!(srt_timestamp(61.234), "00:01:01,234");
+    }
+
+    #[test]
+    fn maps_subtitles_through_trimmed_and_speed_adjusted_clips() {
+        let subtitles = vec![cue("m1", 3.0, 7.0, "Trecho sincronizado")];
+        let clips = vec![clip("m1", "video", 5.0, 15.0, 20.0, 2.0)];
+        let refs = clips.iter().collect::<Vec<_>>();
+        let srt = build_export_subtitle_srt(&subtitles, &refs, &[5.0]);
+        assert!(srt.contains("00:00:00,000 --> 00:00:01,000"));
+        assert!(srt.contains("Trecho sincronizado"));
+    }
+
+    #[test]
+    fn ignores_subtitles_outside_the_clip_source_range() {
+        let subtitles = vec![cue("m1", 0.0, 2.0, "Fora do corte")];
+        let clips = vec![clip("m1", "video", 5.0, 10.0, 20.0, 1.0)];
+        let refs = clips.iter().collect::<Vec<_>>();
+        assert!(build_export_subtitle_srt(&subtitles, &refs, &[5.0]).is_empty());
+    }
+
+    #[test]
+    fn image_subtitle_timing_does_not_apply_video_playback_speed() {
+        let subtitles = vec![cue("image-1", 0.0, 4.0, "Título")];
+        let clips = vec![clip("image-1", "image", 0.0, 4.0, 4.0, 2.0)];
+        let refs = clips.iter().collect::<Vec<_>>();
+        let srt = build_export_subtitle_srt(&subtitles, &refs, &[4.0]);
+        assert!(srt.contains("00:00:00,000 --> 00:00:04,000"));
     }
 }

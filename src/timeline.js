@@ -1,4 +1,16 @@
 /**
+ * Project duration follows the visual sequence; soundtrack clips are mixed
+ * over that sequence and must not extend the displayed video duration.
+ */
+export function getVisualTimelineDuration(clips = []) {
+  return (Array.isArray(clips) ? clips : []).reduce((total, clip) => {
+    if (!clip || (clip.type !== 'video' && clip.type !== 'image')) return total;
+    const duration = Number(clip.duration);
+    return total + (Number.isFinite(duration) && duration > 0 ? duration : 5);
+  }, 0);
+}
+
+/**
  * Convert a pointer position inside a timeline clip into an absolute timestamp
  * in the original media file. Clip start/end values are source-media times.
  */

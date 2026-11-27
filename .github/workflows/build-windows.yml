@@ -1,4 +1,4 @@
-name: Build Windows Setup
+name: Build Edit Master 1.0 Beta Oficial
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - main
       - v1.0-development
       - v1.0-rebuild
+      - v1.0-beta-integrated
   workflow_dispatch:
 
 permissions:
@@ -47,14 +48,56 @@ jobs:
           New-Item -ItemType Directory -Force -Path $ffmpegDir, $whisperDir | Out-Null
 
           $ffmpegZip = Join-Path $env:RUNNER_TEMP "ffmpeg.zip"
-          Invoke-WebRequest "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip" -OutFile $ffmpegZip
+          $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"
+          $downloaded = $false
+          for ($attempt = 1; $attempt -le 5; $attempt++) {
+            try {
+              Remove-Item $ffmpegZip -Force -ErrorAction SilentlyContinue
+              Write-Host "Downloading FFmpeg (attempt $attempt/5)..."
+              Invoke-WebRequest -Uri $ffmpegUrl -OutFile $ffmpegZip -TimeoutSec 180
+              if (-not (Test-Path $ffmpegZip) -or (Get-Item $ffmpegZip).Length -lt 1000000) { throw "FFmpeg download is missing or unexpectedly small." }
+              $stream = [System.IO.File]::OpenRead($ffmpegZip)
+              try {
+                $signature = New-Object byte[] 4
+                [void]$stream.Read($signature, 0, 4)
+              } finally { $stream.Dispose() }
+              if ($signature[0] -ne 0x50 -or $signature[1] -ne 0x4B) { throw "Downloaded response is not a ZIP archive (possible GitHub error page)." }
+              $downloaded = $true
+              break
+            } catch {
+              Write-Warning "FFmpeg download attempt $attempt failed: $($_.Exception.Message)"
+              if ($attempt -lt 5) { Start-Sleep -Seconds (10 * $attempt) }
+            }
+          }
+          if (-not $downloaded) { throw "Could not download a valid FFmpeg ZIP after 5 attempts." }
           $ffmpegExtract = Join-Path $env:RUNNER_TEMP "ffmpeg"
           Expand-Archive -Path $ffmpegZip -DestinationPath $ffmpegExtract -Force
           $ffmpegExe = Get-ChildItem $ffmpegExtract -Filter ffmpeg.exe -Recurse | Select-Object -First 1
           $ffprobeExe = Get-ChildItem $ffmpegExtract -Filter ffprobe.exe -Recurse | Select-Object -First 1
           if (-not $ffmpegExe -or -not $ffprobeExe) { throw "FFmpeg/FFprobe não encontrados no pacote baixado." }
-          Copy-Item $ffmpegExe.FullName (Join-Path $ffmpegDir "ffmpeg.exe") -Force
-          Copy-Item $ffprobeExe.FullName (Join-Path $ffmpegDir "ffprobe.exe") -Force
+          # Keep the complete FFmpeg bin payload, not only the two EXEs.
+          # Some Windows builds require adjacent DLLs at runtime.
+          Get-ChildItem -LiteralPath $ffmpegExe.DirectoryName -File | ForEach-Object {
+            Copy-Item -LiteralPath $_.FullName -Destination $ffmpegDir -Force
+          }
+          if (-not (Test-Path (Join-Path $ffmpegDir "ffmpeg.exe")) -or
+              -not (Test-Path (Join-Path $ffmpegDir "ffprobe.exe"))) {
+            throw "FFmpeg/FFprobe were not copied into src-tauri/resources/ffmpeg."
+          }
+          Write-Host "Bundled FFmpeg payload:"
+          Get-ChildItem -LiteralPath $ffmpegDir -File | Select-Object Name, Length | Format-Table
+
+          # Check the actual filter entry and its libass description. Print diagnostics on failure.
+          $ffmpegFilters = (& (Join-Path $ffmpegDir "ffmpeg.exe") -hide_banner -filters 2>&1 | Out-String)
+          $ffmpegExitCode = $LASTEXITCODE
+          $subtitleFilterLine = ($ffmpegFilters -split "`r?`n" | Where-Object { $_ -match '(?i)\bsubtitles\b' }) -join "`n"
+          if ($ffmpegExitCode -ne 0 -or -not $subtitleFilterLine -or $subtitleFilterLine -notmatch '(?i)libass') {
+            Write-Host "FFmpeg -filters output:"
+            Write-Host $ffmpegFilters
+            throw "FFmpeg não confirmou o filtro subtitles com libass (exit code: $ffmpegExitCode)."
+          }
+          Write-Host "Verified bundled FFmpeg subtitle filter:"
+          Write-Host $subtitleFilterLine
 
           git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git (Join-Path $env:RUNNER_TEMP "whisper.cpp")
           cmake -S (Join-Path $env:RUNNER_TEMP "whisper.cpp") -B (Join-Path $env:RUNNER_TEMP "whisper-build") -A x64 -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_SERVER=OFF
@@ -79,6 +122,60 @@ jobs:
       - name: Build the NSIS installer
         run: npm run tauri:build
 
+      - name: Verify FFmpeg resources are included in the NSIS payload
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $nsisRoot = Join-Path $env:GITHUB_WORKSPACE "src-tauri/target/release/nsis"
+          $scripts = Get-ChildItem -LiteralPath $nsisRoot -Filter "installer.nsi" -Recurse -File
+          if (-not $scripts) { throw "Generated NSIS installer script was not found: $nsisRoot" }
+          $allScriptText = ($scripts | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
+          $ffmpegEntries = [regex]::Matches($allScriptText, '(?im)^\s*File\b[^\r\n]*ffmpeg\.exe')
+          $ffprobeEntries = [regex]::Matches($allScriptText, '(?im)^\s*File\b[^\r\n]*ffprobe\.exe')
+          Write-Host "Generated NSIS scripts:"
+          $scripts | ForEach-Object { Write-Host $_.FullName }
+          if ($ffmpegEntries.Count -lt 1 -or $ffprobeEntries.Count -lt 1) {
+            Write-Host "FFmpeg-related entries found in generated NSIS scripts:"
+            ($allScriptText -split "`r?`n" | Where-Object { $_ -match '(?i)ffmpeg|ffprobe' }) | ForEach-Object { Write-Host $_ }
+            throw "FFmpeg/FFprobe are present in the build workspace but are not being embedded as NSIS File entries."
+          }
+          Write-Host "Verified NSIS embeds ffmpeg.exe and ffprobe.exe."
+
+      - name: Build standalone Edit Master installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $payload = Get-ChildItem "src-tauri/target/release/bundle/nsis" -Filter "*-setup.exe" | Select-Object -First 1
+          if (-not $payload) { throw "Tauri NSIS payload was not generated." }
+          $compiler = Join-Path $env:WINDIR "Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+          if (-not (Test-Path $compiler)) { throw ".NET Framework C# compiler was not found: $compiler" }
+          $outputDir = Join-Path $env:GITHUB_WORKSPACE "installer-output"
+          New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
+          $output = Join-Path $outputDir "Edit-Master-1.0-Beta-Oficial-Setup.exe"
+          $icon = Join-Path $env:GITHUB_WORKSPACE "src-tauri/icons/icon-m.ico"
+          $bootstrapper = Join-Path $env:GITHUB_WORKSPACE "installer/Bootstrapper.cs"
+          Write-Host "Repository root: $env:GITHUB_WORKSPACE"
+          Write-Host "Bootstrapper source: $bootstrapper"
+          if (-not (Test-Path -LiteralPath $bootstrapper -PathType Leaf)) {
+            Write-Host "Installer directory contents:"
+            Get-ChildItem (Join-Path $env:GITHUB_WORKSPACE "installer") -Force | Format-Table FullName, Length
+            throw "Bootstrapper.cs is missing at installer/Bootstrapper.cs."
+          }
+          # Build the resource switch as a normal PowerShell string first. This avoids
+          # PowerShell/native-argument parsing passing the literal "$($payload.FullName)" to csc.exe.
+          $resourceArgument = "/resource:{0},EditMasterPayload.exe" -f $payload.FullName
+          $outputArgument = "/out:{0}" -f $output
+          $iconArgument = "/win32icon:{0}" -f $icon
+          Write-Host "Embedding NSIS payload: $($payload.FullName)"
+          $manifest = Join-Path $env:GITHUB_WORKSPACE "installer/Bootstrapper.manifest"
+          if (-not (Test-Path -LiteralPath $manifest -PathType Leaf)) { throw "Bootstrapper elevation manifest is missing: $manifest" }
+          $manifestArgument = "/win32manifest:{0}" -f $manifest
+          & $compiler /nologo /target:winexe /platform:x64 /optimize+ $outputArgument $iconArgument $manifestArgument /reference:System.Windows.Forms.dll /reference:System.Drawing.dll $resourceArgument $bootstrapper
+          if ($LASTEXITCODE -ne 0) { throw "Failed to compile the branded installer bootstrapper." }
+          if (-not (Test-Path $output)) { throw "Standalone installer output was not created." }
+          Write-Host "Standalone installer: $output"
+          Write-Host ("Standalone installer size: {0:N1} MB" -f ((Get-Item $output).Length / 1MB))
+
       - name: Validate packaged frontend and installer
         shell: pwsh
         run: |
@@ -96,15 +193,15 @@ jobs:
             if (-not (Test-Path $assetPath)) { throw "Frontend asset referenced by index.html is missing: $asset -> $assetPath" }
             Write-Host "Verified frontend asset: $asset"
           }
-          $installer = Get-ChildItem "src-tauri/target/release/bundle/nsis" -Filter "*-setup.exe" | Select-Object -First 1
-          if (-not $installer) { throw "NSIS installer was not generated." }
-          Write-Host "Installer: $($installer.FullName)"
-          Write-Host "Installer size: $($installer.Length) bytes"
+          $installer = Join-Path $env:GITHUB_WORKSPACE "installer-output/Edit-Master-1.0-Beta-Oficial-Setup.exe"
+          if (-not (Test-Path $installer)) { throw "Standalone branded installer was not generated." }
+          Write-Host "Installer: $installer"
+          Write-Host "Installer size: $((Get-Item $installer).Length) bytes"
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@v7
         with:
-          name: Edit-Master-Windows-Setup
-          path: src-tauri/target/release/bundle/nsis/*-setup.exe
+          name: Edit-Master-1.0-Beta-Oficial-Windows-Setup
+          path: installer-output/Edit-Master-1.0-Beta-Oficial-Setup.exe
           if-no-files-found: error
           retention-days: 30

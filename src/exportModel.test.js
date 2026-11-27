@@ -66,26 +66,51 @@ test('clamps custom export dimensions and frame rate at the native boundary', ()
   assert.equal(result.request.fps, 30);
 });
 
-test('refuses to silently omit subtitle and title cues from the exported MP4', () => {
-  const cue = { id: 's1', mediaId: 'v1', start: 1, end: 3, text: 'Olá', kind: 'title' };
-  const result = createExportRequest(media, clips, 'ffmpeg.exe', 'video.mp4', {}, [cue]);
-  assert.equal(result.ok, false);
-  assert.match(result.reason, /títulos ou legendas/i);
+test('forwards subtitle and title cues to the native MP4 renderer', () => {
+  const cues = [
+    { id: 's1', mediaId: 'v1', start: 1, end: 3, text: 'Olá', kind: 'title' },
+    { id: 's2', mediaId: 'v1', start: 4, end: 6, text: 'Tudo bem?', kind: 'subtitle' },
+  ];
+  const result = createExportRequest(media, clips, 'ffmpeg.exe', 'video.mp4', {}, cues);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.request.subtitles, cues);
 });
 
-test('refuses to silently omit overlay transforms from the exported MP4', () => {
-  const transformed = [{ ...clips[0], overlayX: 70 }];
+test('rejects subtitle cues with invalid time ranges or empty text', () => {
+  for (const cue of [
+    { id: 'bad-time', mediaId: 'v1', start: 3, end: 2, text: 'Texto' },
+    { id: 'empty-text', mediaId: 'v1', start: 1, end: 2, text: '  ' },
+  ]) {
+    const result = createExportRequest(media, clips, 'ffmpeg.exe', 'video.mp4', {}, [cue]);
+    assert.equal(result.ok, false);
+    assert.match(result.reason, /legendas ou títulos/i);
+  }
+});
+
+test('accepts static overlay transforms and forwards them to the native renderer', () => {
+  const transformed = [{ ...clips[0], overlayX: 70, overlayY: 30, overlayScale: 125, overlayOpacity: 80, overlayRotation: 12 }];
   const result = createExportRequest(media, transformed, 'ffmpeg.exe', 'video.mp4');
-  assert.equal(result.ok, false);
-  assert.match(result.reason, /transformações/i);
+  assert.equal(result.ok, true);
+  assert.equal(result.request.clips[0].overlayX, 70);
+  assert.equal(result.request.clips[0].overlayY, 30);
+  assert.equal(result.request.clips[0].overlayScale, 125);
+  assert.equal(result.request.clips[0].overlayOpacity, 80);
+  assert.equal(result.request.clips[0].overlayRotation, 12);
 });
 
-test('keeps export available for clips with default preview transforms', () => {
+test('keeps export available for clips with default preview transforms and forwards warmth', () => {
   const defaults = [{ ...clips[0], overlayX: 50, overlayY: 50, overlayScale: 100, overlayOpacity: 100, overlayRotation: 0, colorWarmth: 0, keyframes: [] }];
   const result = createExportRequest(media, defaults, 'ffmpeg.exe', 'video.mp4');
   assert.equal(result.ok, true);
+  assert.equal(result.request.clips[0].colorWarmth, 0);
 });
 
+test('forwards static color warmth to the native renderer', () => {
+  const warmed = [{ ...clips[0], colorWarmth: 65 }];
+  const result = createExportRequest(media, warmed, 'ffmpeg.exe', 'video.mp4');
+  assert.equal(result.ok, true);
+  assert.equal(result.request.clips[0].colorWarmth, 65);
+});
 
 test('rejects source ranges that start before zero or extend past media duration', () => {
   for (const range of [{ start: -0.1, end: 5 }, { start: 0, end: 12.1 }]) {
@@ -98,4 +123,29 @@ test('rejects source ranges that start before zero or extend past media duration
 test('accepts a valid trimmed source range at the media boundaries', () => {
   const result = createExportRequest(media, [{ ...clips[0], start: 0, end: 12 }], 'ffmpeg.exe', 'video.mp4');
   assert.equal(result.ok, true);
+});
+
+test('includes static position, scale, opacity and rotation transforms in the native render request', () => {
+  const transformed = [{
+    ...clips[0],
+    overlayX: 68,
+    overlayY: 35,
+    overlayScale: 125,
+    overlayOpacity: 72,
+    overlayRotation: 18,
+  }];
+  const result = createExportRequest(media, transformed, 'ffmpeg.exe', 'video.mp4');
+  assert.equal(result.ok, true);
+  assert.equal(result.request.clips[0].overlayX, 68);
+  assert.equal(result.request.clips[0].overlayY, 35);
+  assert.equal(result.request.clips[0].overlayScale, 125);
+  assert.equal(result.request.clips[0].overlayOpacity, 72);
+  assert.equal(result.request.clips[0].overlayRotation, 18);
+});
+
+test('continues to reject animated keyframes until interpolation is rendered', () => {
+  const animated = [{ ...clips[0], keyframes: [{ time: 0, x: 50 }, { time: 2, x: 80 }] }];
+  const result = createExportRequest(media, animated, 'ffmpeg.exe', 'video.mp4');
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /keyframes animados/i);
 });

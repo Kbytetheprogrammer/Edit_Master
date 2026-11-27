@@ -17,23 +17,22 @@ export function createExportRequest(media = [], clips = [], ffmpegPath, outputPa
     usedMedia.push({ id: item.id, sourcePath: item.sourcePath });
   }
 
-  // Never silently produce an MP4 that differs from the editor preview.
-  // These preview features are integrated into the renderer in a later 1.0 step.
+  // Never silently omit preview features. Static transforms, color
+  // adjustments, and timed text cues are rendered natively. Animated
+  // keyframes remain blocked until interpolation is implemented.
   const visualMediaIds = new Set(clips.filter(clip => VISUAL_TYPES.has(clip.type)).map(clip => clip.mediaId));
-  if (Array.isArray(subtitles) && subtitles.some(cue => visualMediaIds.has(cue.mediaId))) {
-    return { ok: false, reason: 'Esta timeline contém títulos ou legendas. A exportação com texto ainda está sendo integrada; nenhum arquivo foi renderizado.' };
+  const exportSubtitles = (Array.isArray(subtitles) ? subtitles : [])
+    .filter(cue => cue && visualMediaIds.has(cue.mediaId));
+  for (const cue of exportSubtitles) {
+    const start = Number(cue.start);
+    const end = Number(cue.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start || !String(cue.text || '').trim()) {
+      return { ok: false, reason: 'Uma das legendas ou títulos tem texto ou intervalo de tempo inválido.' };
+    }
   }
   for (const clip of clips.filter(item => VISUAL_TYPES.has(item.type))) {
-    const changedTransform =
-      (clip.overlayX != null && Number(clip.overlayX) !== 50) ||
-      (clip.overlayY != null && Number(clip.overlayY) !== 50) ||
-      (clip.overlayScale != null && Number(clip.overlayScale) !== 100) ||
-      (clip.overlayOpacity != null && Number(clip.overlayOpacity) !== 100) ||
-      (clip.overlayRotation != null && Number(clip.overlayRotation) !== 0) ||
-      (clip.colorWarmth != null && Number(clip.colorWarmth) !== 0) ||
-      (Array.isArray(clip.keyframes) && clip.keyframes.length > 0);
-    if (changedTransform) {
-      return { ok: false, reason: `O clipe “${clip.name || 'sem nome'}” contém transformações, aquecimento de cor ou keyframes que ainda não são reproduzidos integralmente no MP4. Ajuste removido da prévia ou aguarde a integração do renderizador.` };
+    if (Array.isArray(clip.keyframes) && clip.keyframes.length > 0) {
+      return { ok: false, reason: `O clipe “${clip.name || 'sem nome'}” contém keyframes animados que ainda não são reproduzidos no MP4. Remova os keyframes antes de exportar.` };
     }
   }
 
@@ -55,6 +54,14 @@ export function createExportRequest(media = [], clips = [], ffmpegPath, outputPa
       ffmpegPath: String(ffmpegPath),
       outputPath: String(outputPath),
       media: usedMedia,
+      subtitles: exportSubtitles.map((cue, index) => ({
+        id: String(cue.id || `cue-${index + 1}`),
+        mediaId: String(cue.mediaId),
+        start: Number(cue.start),
+        end: Number(cue.end),
+        text: String(cue.text).slice(0, 5000),
+        kind: cue.kind === 'title' ? 'title' : 'subtitle',
+      })),
       clips: clips.map(clip => ({
         mediaId: clip.mediaId,
         type: clip.type,
@@ -69,6 +76,12 @@ export function createExportRequest(media = [], clips = [], ffmpegPath, outputPa
         colorBrightness: clip.colorBrightness,
         colorContrast: clip.colorContrast,
         colorSaturation: clip.colorSaturation,
+        colorWarmth: clip.colorWarmth,
+        overlayX: clip.overlayX,
+        overlayY: clip.overlayY,
+        overlayScale: clip.overlayScale,
+        overlayOpacity: clip.overlayOpacity,
+        overlayRotation: clip.overlayRotation,
       })),
       width: Number(options.width) || 1920,
       height: Number(options.height) || 1080,
