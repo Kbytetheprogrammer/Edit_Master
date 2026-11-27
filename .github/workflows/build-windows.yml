@@ -130,8 +130,8 @@ jobs:
           $scripts = Get-ChildItem -LiteralPath $nsisRoot -Filter "installer.nsi" -Recurse -File
           if (-not $scripts) { throw "Generated NSIS installer script was not found: $nsisRoot" }
           $allScriptText = ($scripts | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
-          $ffmpegEntries = [regex]::Matches($allScriptText, '(?im)^\\s*File\\b[^\\r\\n]*ffmpeg\\.exe')
-          $ffprobeEntries = [regex]::Matches($allScriptText, '(?im)^\\s*File\\b[^\\r\\n]*ffprobe\\.exe')
+          $ffmpegEntries = [regex]::Matches($allScriptText, '(?im)^\s*File\b[^\r\n]*ffmpeg\.exe')
+          $ffprobeEntries = [regex]::Matches($allScriptText, '(?im)^\s*File\b[^\r\n]*ffprobe\.exe')
           Write-Host "Generated NSIS scripts:"
           $scripts | ForEach-Object { Write-Host $_.FullName }
           if ($ffmpegEntries.Count -lt 1 -or $ffprobeEntries.Count -lt 1) {
