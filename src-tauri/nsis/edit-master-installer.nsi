@@ -708,12 +708,12 @@ Function un.EM_UninstallWelcomePage
   CreateFont $2 "Segoe UI" 22 700
   SendMessage $1 ${WM_SETFONT} $2 1
   SetCtlColors $1 "FF7A00" "171717"
-  ${NSD_CreateLabel} 30u 88u 450u 30u "Assistente de desinstalação"
+  ${NSD_CreateLabel} 30u 88u 450u 30u "Que pena que você partiu..."
   Pop $1
   CreateFont $2 "Segoe UI" 14 600
   SendMessage $1 ${WM_SETFONT} $2 1
   SetCtlColors $1 "FFFFFF" "171717"
-  ${NSD_CreateLabel} 30u 134u 430u 42u "Este processo vai remover o Edit Master do seu computador."
+  ${NSD_CreateLabel} 30u 134u 430u 42u "O Edit Master agradece por ter feito parte dos seus projetos. Esperamos encontrar você novamente no futuro!"
   Pop $1
   SetCtlColors $1 "D0D0D0" "171717"
   ${NSD_CreateLabel} 30u 196u 430u 38u "Na próxima etapa, você poderá escolher se deseja manter ou apagar os dados locais do aplicativo."
