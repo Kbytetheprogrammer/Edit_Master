@@ -832,12 +832,22 @@ fn check_local_update(
 fn launch_uninstaller(app: tauri::AppHandle) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
-        let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-        let dir = exe.parent().ok_or("Não foi possível localizar a pasta do aplicativo")?;
-        let candidates = ["uninstall.exe", "uninstaller.exe", "unins000.exe"];
-        let path = candidates.iter().map(|name| dir.join(name)).find(|p| p.is_file())
-            .ok_or("O desinstalador não foi encontrado nesta pasta. Esta pode ser uma execução de desenvolvimento ou uma instalação MSI.")?;
-        Command::new(path).spawn().map_err(|e| format!("Falha ao iniciar o desinstalador: {e}"))?;
+        // Always launch the branded Edit Master uninstaller first.
+        // The NSIS uninstall.exe is an internal engine and must only be started
+        // silently by the branded WinForms front-end.
+        let program_data = std::env::var_os("ProgramData")
+            .map(std::path::PathBuf::from)
+            .ok_or("Não foi possível localizar a pasta ProgramData do Windows.")?;
+        let branded = program_data.join("Edit Master").join("EditMasterUninstaller.exe");
+        if !branded.is_file() {
+            return Err(format!(
+                "O desinstalador visual do Edit Master não foi encontrado: {}. Reinstale o aplicativo usando o instalador oficial para reparar os arquivos.",
+                branded.display()
+            ));
+        }
+        Command::new(&branded)
+            .spawn()
+            .map_err(|e| format!("Falha ao iniciar o desinstalador personalizado: {e}"))?;
         std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_millis(700));
             app.exit(0);
