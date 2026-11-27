@@ -1118,6 +1118,9 @@ Function un.onInit
 
   !insertmacro MUI_UNGETLANGUAGE
 
+  ; Always let the user choose the uninstaller language, just like the download setup.
+  !insertmacro MUI_UNLANGDLL_DISPLAY
+
   ${GetOptions} $CMDLINE "/P" $PassiveMode
   ${IfNot} ${Errors}
     StrCpy $PassiveMode 1
