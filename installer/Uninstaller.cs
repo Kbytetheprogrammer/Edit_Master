@@ -211,11 +211,11 @@ internal sealed class UninstallerForm : Form
         };
         timer.Start();
 
+        bool removeLocalData = deleteData != null && deleteData.Checked;
         ThreadPool.QueueUserWorkItem(delegate {
             int exitCode = -1;
             string error = null;
             try {
-                bool removeLocalData = deleteData != null && deleteData.Checked;
                 string installDir = FindInstallDirectory();
                 // The branded UI is installed in ProgramData; the NSIS engine remains in
                 // the application directory and performs the actual file/registry cleanup.
