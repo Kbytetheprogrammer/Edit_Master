@@ -131,8 +131,8 @@ internal sealed class InstallerForm : Form
     private string FindExistingInstall()
     {
         string[] roots = new string[] {
-            @"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
-            @"SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
         };
         RegistryKey[] hives = new RegistryKey[] { Registry.LocalMachine, Registry.CurrentUser };
         foreach (RegistryKey hive in hives)
@@ -155,7 +155,7 @@ internal sealed class InstallerForm : Form
                 } catch { }
             }
             try {
-                using (RegistryKey item = hive.OpenSubKey(@"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\UninstallEdit Master")) {
+                using (RegistryKey item = hive.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\UninstallEdit Master")) {
                     if (item != null) {
                         string location = Convert.ToString(item.GetValue("InstallLocation", "")).Trim().Trim('"');
                         if (HasInstalledExecutable(location, item)) return location;
