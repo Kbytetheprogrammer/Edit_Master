@@ -4,6 +4,7 @@ using System.Drawing;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 internal sealed class UninstallerForm : Form
 {
@@ -96,6 +97,7 @@ internal sealed class UninstallerForm : Form
         content.Controls.Add(subtitle);
         content.Controls.Add(body);
         Controls.Add(content);
+        FormClosed += delegate { if (page == 3) ScheduleSelfDelete(); };
         ShowPage(0);
     }
 
@@ -213,15 +215,15 @@ internal sealed class UninstallerForm : Form
             int exitCode = -1;
             string error = null;
             try {
-                string installDir = Path.GetDirectoryName(Application.ExecutablePath);
-                // The NSIS uninstaller is stored beside the application. The branded UI
-                // is installed in ProgramData so NSIS can remove the application folder.
-                string common = Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData);
+                bool removeLocalData = deleteData != null && deleteData.Checked;
+                string installDir = FindInstallDirectory();
+                // The branded UI is installed in ProgramData; the NSIS engine remains in
+                // the application directory and performs the actual file/registry cleanup.
                 string nsisUninstaller = Path.Combine(installDir, "uninstall.exe");
                 if (!File.Exists(nsisUninstaller)) throw new FileNotFoundException("O mecanismo interno de desinstalação não foi encontrado.", nsisUninstaller);
                 ProcessStartInfo psi = new ProcessStartInfo();
                 psi.FileName = nsisUninstaller;
-                psi.Arguments = "/S /EMDELETEAPPDATA=" + (deleteData != null && deleteData.Checked ? "1" : "0");
+                psi.Arguments = "/S /EMDELETEAPPDATA=" + (removeLocalData ? "1" : "0");
                 psi.UseShellExecute = true;
                 psi.Verb = "runas";
                 using (Process p = Process.Start(psi)) {
@@ -242,9 +244,37 @@ internal sealed class UninstallerForm : Form
                 }
                 SetProgress(100, L("Desinstalação concluída!", "Uninstallation complete!", "¡Desinstalación completada!"));
                 ShowPage(3);
-                ScheduleSelfDelete();
             });
         });
+    }
+
+
+    private string FindInstallDirectory()
+    {
+        string[] keys = new string[] {
+            @"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Edit Master",
+            @"SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Edit Master"
+        };
+        RegistryKey[] roots = new RegistryKey[] { Registry.LocalMachine, Registry.CurrentUser };
+        foreach (RegistryKey root in roots) {
+            foreach (string key in keys) {
+                try {
+                    using (RegistryKey item = root.OpenSubKey(key)) {
+                        if (item == null) continue;
+                        string location = Convert.ToString(item.GetValue("InstallLocation", "")).Trim().Trim('"');
+                        if (!String.IsNullOrWhiteSpace(location) && File.Exists(Path.Combine(location, "uninstall.exe")))
+                            return location;
+                    }
+                } catch { }
+            }
+        }
+        string[] fallbacks = new string[] {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Edit Master"),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Edit Master")
+        };
+        foreach (string candidate in fallbacks)
+            if (File.Exists(Path.Combine(candidate, "uninstall.exe"))) return candidate;
+        throw new DirectoryNotFoundException("A pasta de instalação do Edit Master não foi encontrada no registro do Windows.");
     }
 
     private void ScheduleSelfDelete()
