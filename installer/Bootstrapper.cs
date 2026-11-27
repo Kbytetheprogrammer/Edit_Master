@@ -346,18 +346,32 @@ internal sealed class InstallerForm : Form
 
     private string FindBundledFile(string fileName)
     {
-        // Tauri/NSIS can place bundled resources at different relative depths.
-        // Search the complete application install tree instead of assuming resources/<tool>/.
-        try {
-            string[] matches = Directory.GetFiles(installDir, fileName, SearchOption.AllDirectories);
-            string best = "";
-            foreach (string match in matches) {
-                if (String.IsNullOrEmpty(best) || match.Length < best.Length) best = match;
-            }
-            return best;
-        } catch {
-            return "";
+        // Resolve resources safely, one directory at a time. Directory.GetFiles(...,
+        // AllDirectories) aborts the entire search if just one nested folder is inaccessible.
+        if (String.IsNullOrWhiteSpace(installDir) || !Directory.Exists(installDir)) return "";
+        Stack<string> pending = new Stack<string>();
+        HashSet<string> visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        pending.Push(installDir);
+        string best = "";
+        while (pending.Count > 0) {
+            string current = pending.Pop();
+            if (!visited.Add(current)) continue;
+            try {
+                foreach (string match in Directory.GetFiles(current, fileName, SearchOption.TopDirectoryOnly)) {
+                    if (String.IsNullOrEmpty(best) || match.Length < best.Length) best = match;
+                }
+            } catch { }
+            try {
+                foreach (string directory in Directory.GetDirectories(current)) {
+                    try {
+                        // Do not follow junctions/symlinks; they can create loops or leave the install tree.
+                        if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) == 0)
+                            pending.Push(directory);
+                    } catch { }
+                }
+            } catch { }
         }
+        return best;
     }
 
     private void CopyAdjacentDlls(string sourceFile, string destination)
@@ -448,6 +462,12 @@ internal sealed class InstallerForm : Form
                 await System.Threading.Tasks.Task.Run(delegate { p.WaitForExit(); });
                 if (p.ExitCode != 0) throw new Exception("O mecanismo de instalação retornou o código " + p.ExitCode + ".");
             }
+            // Read the path actually registered by NSIS. This avoids searching the
+            // originally selected folder if NSIS normalized or restored another location.
+            string registeredInstall = FindExistingInstall();
+            if (!String.IsNullOrWhiteSpace(registeredInstall)) installDir = registeredInstall;
+            if (!Directory.Exists(installDir))
+                throw new Exception("A pasta de instalação não foi encontrada após o NSIS concluir: " + installDir);
             if (useFfmpeg || useWhisper) FinalizeMediaTools(useFfmpeg, useWhisper, destinationRoot, previousRoot);
             else FinalizeMediaTools(false, false, "", previousRoot);
             try { File.Delete(payload); } catch { }
