@@ -1031,7 +1031,8 @@ Section Install
   ; remove the application directory while the custom WinForms window is open.
   CreateDirectory "$COMMONAPPDATA\Edit Master"
   IfFileExists "$INSTDIR\resources\uninstaller\EditMasterUninstaller.exe" 0 EM_UninstallerMissing
-  CopyFiles /SILENT "$INSTDIR\resources\uninstaller\EditMasterUninstaller.exe" "$COMMONAPPDATA\Edit Master\EditMasterUninstaller.exe"
+  ; CopyFiles expects the destination DIRECTORY, not a destination filename.
+  CopyFiles /SILENT "$INSTDIR\resources\uninstaller\EditMasterUninstaller.exe" "$COMMONAPPDATA\Edit Master"
   IfFileExists "$COMMONAPPDATA\Edit Master\EditMasterUninstaller.exe" EM_UninstallerReady EM_UninstallerMissing
   EM_UninstallerMissing:
     MessageBox MB_ICONSTOP "O assistente personalizado de desinstalação não foi incluído no pacote."
