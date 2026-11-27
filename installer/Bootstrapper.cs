@@ -186,9 +186,9 @@ internal sealed class InstallerForm : Form
             using (SolidBrush white = new SolidBrush(Color.White))
             using (SolidBrush mutedBrush = new SolidBrush(Color.FromArgb(195,210,210,210)))
             using (SolidBrush orangeBrush = new SolidBrush(Color.FromArgb(255,122,0))) {
-                using(Font h = new Font("Segoe UI", done?19f:17f, FontStyle.Bold)) g.DrawString(done?"PRONTO PARA CRIAR.":"CRIE. EDITE. TRANSFORME.",h,white,28,35);
-                using(Font sub = new Font("Segoe UI",9.5f)) g.DrawString(done?"Seu próximo projeto começa agora.":"Suas ideias ganham vida com o Edit Master.",sub,mutedBrush,30,73);
-                using(Font tag = new Font("Segoe UI",8f,FontStyle.Bold)) g.DrawString(done?"INSTALAÇÃO FINALIZADA":"EDIT MASTER  •  1.0 BETA",tag,orangeBrush,30,106);
+                using(Font h = new Font("Segoe UI", done?19f:17f, FontStyle.Bold)) g.DrawString(done?L("PRONTO PARA CRIAR.","READY TO CREATE.","LISTO PARA CREAR."):L("CRIE. EDITE. TRANSFORME.","CREATE. EDIT. TRANSFORM.","CREA. EDITA. TRANSFORMA."),h,white,28,35);
+                using(Font sub = new Font("Segoe UI",9.5f)) g.DrawString(done?L("Seu próximo projeto começa agora.","Your next project starts now.","Tu próximo proyecto empieza ahora."):L("Suas ideias ganham vida com o Edit Master.","Bring your ideas to life with Edit Master.","Tus ideas cobran vida con Edit Master."),sub,mutedBrush,30,73);
+                using(Font tag = new Font("Segoe UI",8f,FontStyle.Bold)) g.DrawString(done?L("INSTALAÇÃO FINALIZADA","INSTALLATION COMPLETE","INSTALACIÓN FINALIZADA"):"EDIT MASTER  •  1.0 BETA",tag,orangeBrush,30,106);
                 for(int i=0;i<5;i++) {
                     Rectangle f = new Rectangle(376+i*48,48+(i%2)*5,40,31);
                     using(SolidBrush fb = new SolidBrush(i==2?Color.FromArgb(255,122,0):Color.FromArgb(65,75,82))) g.FillRectangle(fb,f);
@@ -290,7 +290,7 @@ internal sealed class InstallerForm : Form
             try {
                 if (!drive.IsReady || drive.DriveType != DriveType.Fixed) continue;
                 double free = drive.AvailableFreeSpace / 1073741824.0;
-                string item = drive.Name + " | " + free.ToString("0.0") + " GB livres";
+                string item = drive.Name + " | " + free.ToString("0.0") + L(" GB livres", " GB free", " GB libres");
                 int idx = mediaDrive.Items.Add(item);
                 if (String.Equals(drive.Name, preferred, StringComparison.OrdinalIgnoreCase)) mediaDrive.SelectedIndex = idx;
             } catch { }
@@ -315,11 +315,11 @@ internal sealed class InstallerForm : Form
     private void NextClicked(object sender, EventArgs e)
     {
         if (page == 2) {
-            if (String.IsNullOrWhiteSpace(folder.Text)) { MessageBox.Show(this, "Escolha uma pasta válida.", "Edit Master", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+            if (String.IsNullOrWhiteSpace(folder.Text)) { MessageBox.Show(this, L("Escolha uma pasta válida.", "Choose a valid folder.", "Elige una carpeta válida."), "Edit Master", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
             installDir = folder.Text.Trim();
             if (ffmpeg.Checked || whisper.Checked) {
                 string root = SelectedMediaRoot();
-                if (String.IsNullOrEmpty(root)) { MessageBox.Show(this, "Selecione uma unidade disponível para os componentes.", "Edit Master", MessageBoxButtons.OK, MessageBoxIcon.Warning); ShowPage(1); return; }
+                if (String.IsNullOrEmpty(root)) { MessageBox.Show(this, L("Selecione uma unidade disponível para os componentes.", "Select an available drive for the components.", "Selecciona una unidad disponible para los componentes."), "Edit Master", MessageBoxButtons.OK, MessageBoxIcon.Warning); ShowPage(1); return; }
             }
         }
         if (page == 4) {
@@ -455,7 +455,7 @@ internal sealed class InstallerForm : Form
             ShowPage(4);
         } catch (Exception ex) {
             installing = false;
-            MessageBox.Show(this, "Não foi possível concluir a instalação.\r\n\r\n" + ex.Message, "Edit Master Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, L("Não foi possível concluir a instalação.\r\n\r\n", "The installation could not be completed.\r\n\r\n", "No se pudo completar la instalación.\r\n\r\n") + ex.Message, "Edit Master Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
             Close();
         }
     }
