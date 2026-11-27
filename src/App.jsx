@@ -289,7 +289,8 @@ function App() {
     invoke('get_bundled_media_tools').then(tools => {
       if (cancelled || !tools?.ffmpegPath) return;
       const manuallyConfigured = safeStorageGet(FFMPEG_PATH_KEY);
-      if (!manuallyConfigured) {
+      const wasInstallerManaged = manuallyConfigured && /[\\/]resources[\\/]ffmpeg[\\/]|[\\/]Edit Master[\\/]MediaTools[\\/]ffmpeg[\\/]/i.test(manuallyConfigured);
+      if (!manuallyConfigured || wasInstallerManaged) {
         setFfmpegPath(tools.ffmpegPath);
         safeStorageSet(FFMPEG_PATH_KEY, tools.ffmpegPath);
       }
