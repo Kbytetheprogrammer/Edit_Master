@@ -662,6 +662,7 @@ FunctionEnd
  ; Uninstaller Pages - custom Edit Master UI matching the download setup.
 Var DeleteAppDataCheckbox
 Var DeleteAppDataCheckboxState
+Var EM_UninstallDeleteAppData
 
 UninstPage custom un.EM_UninstallWelcomePage un.EM_UninstallWelcomeLeave
 UninstPage custom un.EM_UninstallConfirmPage un.EM_UninstallConfirmLeave
@@ -1026,7 +1027,18 @@ Section Install
     WriteRegStr SHCTX "Software\Classes\\{{protocol}}\shell\open\command" "" "$\"$INSTDIR\${MAINBINARYNAME}.exe$\" $\"%1$\""
   {{/each}}
 
-  ; Create uninstaller
+  ; Install the branded uninstaller UI outside $INSTDIR so the NSIS engine can
+  ; remove the application directory while the custom WinForms window is open.
+  CreateDirectory "$COMMONAPPDATA\Edit Master"
+  IfFileExists "$INSTDIR\resources\uninstaller\EditMasterUninstaller.exe" 0 EM_UninstallerMissing
+  CopyFiles /SILENT "$INSTDIR\resources\uninstaller\EditMasterUninstaller.exe" "$COMMONAPPDATA\Edit Master\EditMasterUninstaller.exe"
+  IfFileExists "$COMMONAPPDATA\Edit Master\EditMasterUninstaller.exe" EM_UninstallerReady EM_UninstallerMissing
+  EM_UninstallerMissing:
+    MessageBox MB_ICONSTOP "O assistente personalizado de desinstalação não foi incluído no pacote."
+    Abort
+  EM_UninstallerReady:
+
+  ; Create the internal NSIS engine used by the branded uninstaller
   WriteUninstaller "$INSTDIR\uninstall.exe"
 
   ; Save $INSTDIR in registry for future installations
@@ -1054,7 +1066,7 @@ Section Install
   WriteRegStr SHCTX "${UNINSTKEY}" "DisplayVersion" "${VERSION}"
   WriteRegStr SHCTX "${UNINSTKEY}" "Publisher" "${MANUFACTURER}"
   WriteRegStr SHCTX "${UNINSTKEY}" "InstallLocation" "$\"$INSTDIR$\""
-  WriteRegStr SHCTX "${UNINSTKEY}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
+  WriteRegStr SHCTX "${UNINSTKEY}" "UninstallString" "$\"$COMMONAPPDATA\Edit Master\EditMasterUninstaller.exe$\""
   WriteRegDWORD SHCTX "${UNINSTKEY}" "NoModify" "1"
   WriteRegDWORD SHCTX "${UNINSTKEY}" "NoRepair" "1"
 
@@ -1118,12 +1130,22 @@ Function un.onInit
 
   !insertmacro MUI_UNGETLANGUAGE
 
-  ; Ask for the uninstaller language using NSIS LangDLL.
-  ; MUI_UNLANGDLL_DISPLAY is not a MUI2 macro and breaks makensis.
-  LangDLL::LangDialog "Edit Master - Language" "Choose the language for the uninstaller:"
-  Pop $LANGUAGE
-  StrCmp $LANGUAGE "cancel" 0 +2
-    Abort
+  ; The branded WinForms uninstaller owns language selection. Keep the legacy
+  ; NSIS language dialog only when the internal engine is launched directly.
+  ${IfNot} ${Silent}
+    LangDLL::LangDialog "Edit Master - Language" "Choose the language for the uninstaller:"
+    Pop $LANGUAGE
+    StrCmp $LANGUAGE "cancel" 0 +2
+      Abort
+  ${EndIf}
+
+  StrCpy $DeleteAppDataCheckboxState 0
+  ${GetOptions} $CMDLINE "/EMDELETEAPPDATA=" $EM_UninstallDeleteAppData
+  ${IfNot} ${Errors}
+    ${If} $EM_UninstallDeleteAppData == "1"
+      StrCpy $DeleteAppDataCheckboxState 1
+    ${EndIf}
+  ${EndIf}
 
   ${GetOptions} $CMDLINE "/P" $PassiveMode
   ${IfNot} ${Errors}
