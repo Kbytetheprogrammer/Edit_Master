@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Reflection;
 using System.Windows.Forms;
@@ -153,6 +154,43 @@ internal sealed class InstallerForm : Form
         card.Controls.Add(h); card.Controls.Add(d);
     }
 
+
+    private Panel CreateHeroArt(bool done)
+    {
+        Panel p = new Panel { BackColor = Color.FromArgb(25,25,25), Bounds = new Rectangle(32,188,670,150) };
+        p.Paint += delegate(object sender, PaintEventArgs e) {
+            Graphics g = e.Graphics; g.SmoothingMode = SmoothingMode.AntiAlias;
+            Rectangle r = p.ClientRectangle;
+            using (LinearGradientBrush b = new LinearGradientBrush(r, Color.FromArgb(48,32,23), Color.FromArgb(17,23,29), 0f)) g.FillRectangle(b,r);
+            using (Pen grid = new Pen(Color.FromArgb(24,255,255,255))) {
+                for(int x=15;x<670;x+=28) g.DrawLine(grid,x,0,x,150);
+                for(int y=15;y<150;y+=28) g.DrawLine(grid,0,y,670,y);
+            }
+            using (SolidBrush white = new SolidBrush(Color.White))
+            using (SolidBrush mutedBrush = new SolidBrush(Color.FromArgb(195,210,210,210)))
+            using (SolidBrush orangeBrush = new SolidBrush(Color.FromArgb(255,122,0))) {
+                using(Font h = new Font("Segoe UI", done?19f:17f, FontStyle.Bold)) g.DrawString(done?"PRONTO PARA CRIAR.":"CRIE. EDITE. TRANSFORME.",h,white,28,35);
+                using(Font sub = new Font("Segoe UI",9.5f)) g.DrawString(done?"Seu próximo projeto começa agora.":"Suas ideias ganham vida com o Edit Master.",sub,mutedBrush,30,73);
+                using(Font tag = new Font("Segoe UI",8f,FontStyle.Bold)) g.DrawString(done?"INSTALAÇÃO FINALIZADA":"EDIT MASTER  •  1.0 BETA",tag,orangeBrush,30,106);
+                for(int i=0;i<5;i++) {
+                    Rectangle f = new Rectangle(376+i*48,48+(i%2)*5,40,31);
+                    using(SolidBrush fb = new SolidBrush(i==2?Color.FromArgb(255,122,0):Color.FromArgb(65,75,82))) g.FillRectangle(fb,f);
+                    using(Pen fp = new Pen(Color.FromArgb(170,255,255,255))) g.DrawRectangle(fp,f);
+                }
+                using(Pen track = new Pen(Color.FromArgb(130,255,255,255),2f)) g.DrawLine(track,370,118,630,118);
+                if(done) {
+                    using(Pen check = new Pen(Color.FromArgb(255,122,0),7f)) { check.StartCap=LineCap.Round; check.EndCap=LineCap.Round; g.DrawLines(check,new Point[]{new Point(510,91),new Point(528,108),new Point(560,72)}); }
+                    using(Font pct = new Font("Segoe UI",8f,FontStyle.Bold)) g.DrawString("100%",pct,white,579,84);
+                } else {
+                    g.FillEllipse(orangeBrush,490,82,34,34);
+                    using(SolidBrush play = new SolidBrush(Color.FromArgb(25,25,25))) g.FillPolygon(play,new Point[]{new Point(503,91),new Point(503,107),new Point(516,99)});
+                }
+                using(Font logo = new Font("Segoe UI",23f,FontStyle.Bold)) g.DrawString("M",logo,white,625,10);
+            }
+        };
+        return p;
+    }
+
     private void ShowPage(int index)
     {
         page = index; ResetContent();
@@ -168,11 +206,12 @@ internal sealed class InstallerForm : Form
             body.Text = updateMode
                 ? "Vamos substituir os arquivos do aplicativo pela nova versão, mantendo a mesma pasta e os componentes escolhidos. Seus projetos e preferências serão preservados."
                 : "Um editor de vídeo leve, simples e pronto para criar.\r\nEste assistente vai preparar tudo para você.";
+            content.Controls.Add(CreateHeroArt(false));
             if (updateMode) {
-                Panel info = new Panel { BackColor = panel, Bounds = new Rectangle(32, 205, 670, 82) };
-                Label accent = new Label { BackColor = orange, Bounds = new Rectangle(0, 0, 5, 82) };
-                Label heading = new Label { Text = "ATUALIZAÇÃO DISPONÍVEL", ForeColor = orange, Font = new Font("Segoe UI", 9, FontStyle.Bold), AutoSize = true, Location = new Point(22, 15) };
-                Label path = new Label { Text = installDir, ForeColor = Color.White, Font = new Font("Segoe UI", 9), AutoSize = false, AutoEllipsis = true, Location = new Point(22, 40), Size = new Size(625, 24) };
+                Panel info = new Panel { BackColor = panel, Bounds = new Rectangle(32, 350, 670, 58) };
+                Label accent = new Label { BackColor = orange, Bounds = new Rectangle(0, 0, 5, 58) };
+                Label heading = new Label { Text = "ATUALIZAÇÃO DISPONÍVEL", ForeColor = orange, Font = new Font("Segoe UI", 9, FontStyle.Bold), AutoSize = true, Location = new Point(22, 5) };
+                Label path = new Label { Text = installDir, ForeColor = Color.White, Font = new Font("Segoe UI", 8), AutoSize = false, AutoEllipsis = true, Location = new Point(22, 28), Size = new Size(625, 22) };
                 info.Controls.Add(accent); info.Controls.Add(heading); info.Controls.Add(path); content.Controls.Add(info);
             }
         } else if (page == 1) {
@@ -213,7 +252,8 @@ internal sealed class InstallerForm : Form
             title.Text = updateMode ? "Atualização concluída!" : "Instalação concluída!";
             subtitle.Text = "O Edit Master está pronto para você.";
             body.Text = "Tudo certo! Seus componentes foram organizados na unidade escolhida e o aplicativo está pronto para abrir.";
-            launch = new CheckBox { Text = "Abrir Edit Master agora", Checked = true, ForeColor = Color.White, BackColor = bg, AutoSize = true, Location = new Point(34, 230), Font = new Font("Segoe UI", 11, FontStyle.Bold) };
+            content.Controls.Add(CreateHeroArt(true));
+            launch = new CheckBox { Text = "Abrir Edit Master agora", Checked = true, ForeColor = Color.White, BackColor = bg, AutoSize = true, Location = new Point(34, 360), Font = new Font("Segoe UI", 11, FontStyle.Bold) };
             content.Controls.Add(launch);
             back.Visible = false; cancel.Visible = false; next.Visible = true; next.Text = "CONCLUIR";
         }
